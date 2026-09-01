@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "dist/server.cjs" },
+    { "source": "/api", "destination": "dist/server.cjs" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

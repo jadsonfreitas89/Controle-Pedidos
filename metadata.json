@@ -1,0 +1,6 @@
+{
+  "name": "Sistema de Controle de Solicitações",
+  "description": "App para gestão de pedidos de materiais, ferramentas e equipamentos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
