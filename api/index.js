@@ -1,6 +1,4 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req, res) {
   const GAS_URL = process.env.GAS_URL;
   const API_SECRET = process.env.API_SECRET;
   
@@ -41,7 +39,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } catch (e) {
         diagnostic.error = 'JSON inválido';
       }
-    } catch (error: any) {
+    } catch (error) {
       diagnostic.error = error.message;
     }
     return res.status(200).json(diagnostic);
@@ -70,7 +68,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const result = await response.json();
       return res.status(response.status).json(result);
-    } catch (error: any) {
+    } catch (error) {
       return res.status(503).json({ success: false, error: 'Erro ao conectar ao backend.' });
     }
   }
