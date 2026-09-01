@@ -8,7 +8,15 @@ async function request(action: string, data: any = {}) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action, data })
   });
-  return response.json();
+  const json = await response.json();
+  
+  return {
+    success: json.success ?? json.sucesso ?? false,
+    data: json.data ?? json.dados ?? undefined,
+    message: json.message ?? json.mensagem ?? undefined,
+    error: json.error ?? json.erro ?? undefined,
+    ...json
+  };
 }
 
 export const api = {
