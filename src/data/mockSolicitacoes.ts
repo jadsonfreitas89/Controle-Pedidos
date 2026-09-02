@@ -17,7 +17,8 @@ export const mockSolicitacoes: Solicitacao[] = [
     ultimaAtualizacao: '2026-09-01T10:00:00',
     dataEntrega: null,
     diasDecorridos: 0,
-    situacao: 'PENDENTE'
+    situacao: 'PENDENTE',
+    whatsappEnviado: 'NÃO'
   },
   {
     protocolo: 'SOL-2026-0002',
@@ -34,6 +35,7 @@ export const mockSolicitacoes: Solicitacao[] = [
     ultimaAtualizacao: '2026-09-01T09:00:00',
     dataEntrega: '2026-09-01T09:00:00',
     diasDecorridos: 2,
-    situacao: 'ENTREGUE'
+    situacao: 'ENTREGUE',
+    whatsappEnviado: 'NÃO'
   }
 ];

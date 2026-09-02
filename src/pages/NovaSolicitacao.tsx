@@ -90,7 +90,8 @@ export default function NovaSolicitacao() {
         precisaLiberacaoShe,
         observacoes,
         situacao: 'PENDENTE',
-        dataEntrega: null
+        dataEntrega: null,
+        whatsappEnviado: 'NÃO'
       });
 
       if (response.success) {

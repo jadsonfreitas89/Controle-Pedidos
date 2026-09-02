@@ -5,7 +5,6 @@ import { NavLink } from 'react-router-dom';
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/solicitacoes', label: 'Solicitações', icon: ListTodo },
-  { path: '/nova', label: 'Nova', icon: PlusCircle },
   { path: '/itens', label: 'Itens', icon: Wrench },
   { path: '/usuarios', label: 'Usuários', icon: Users },
   { path: '/whatsapp', label: 'WhatsApp', icon: MessageSquare },

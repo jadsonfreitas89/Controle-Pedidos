@@ -1,10 +1,12 @@
 import { useEffect, useState, FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Card from '../components/ui/Card';
 import { api } from '../services/api';
 import { Solicitacao } from '../types/solicitacao';
-import { Search, Filter, CheckCircle2, Trash2, Edit3, X, AlertTriangle, Calendar, User, MapPin } from 'lucide-react';
+import { Search, Filter, CheckCircle2, Trash2, Edit3, X, AlertTriangle, Calendar, User, MapPin, PlusCircle } from 'lucide-react';
 
 export default function Solicitacoes() {
+  const navigate = useNavigate();
   const [data, setData] = useState<Solicitacao[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -204,12 +206,20 @@ export default function Solicitacoes() {
           <h2 className="text-2xl font-bold text-slate-800">Consultar Solicitações</h2>
           <p className="text-slate-500 text-sm">Gerencie e acompanhe o status dos pedidos</p>
         </div>
-        <button 
-          onClick={fetchSolicitacoes} 
-          className="text-sm bg-white border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-lg text-slate-600 transition-colors"
-        >
-          Atualizar lista
-        </button>
+        <div className="flex gap-2">
+            <button 
+            onClick={() => navigate('/nova')} 
+            className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
+            >
+                <PlusCircle size={16} /> Nova Solicitação
+            </button>
+            <button 
+            onClick={fetchSolicitacoes} 
+            className="text-sm bg-white border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-lg text-slate-600 transition-colors"
+            >
+            Atualizar lista
+            </button>
+        </div>
       </div>
 
       {/* Search and Filters */}
