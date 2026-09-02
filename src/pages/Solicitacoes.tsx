@@ -62,6 +62,17 @@ export default function Solicitacoes() {
   };
 
   const handleMarcarWhatsAppEnviado = async (protocolo: string, enviado: 'SIM' | 'NÃO') => {
+    // Robust validation for already sent status
+    if (enviado === 'SIM') {
+      const currentSolicitacao = data.find(s => s.protocolo === protocolo);
+      const isAlreadySent = String(currentSolicitacao?.whatsappEnviado || '').trim().toUpperCase() === 'SIM';
+      
+      if (isAlreadySent) {
+        console.warn('WhatsApp já foi enviado para esta solicitação.');
+        return;
+      }
+    }
+
     setActionLoading(true);
     setActionError(null);
     try {
@@ -348,7 +359,7 @@ export default function Solicitacoes() {
                     </div>
 
                     <div className="flex flex-wrap gap-2 pt-2 border-t mt-2">
-                        {selected.whatsappEnviado === 'SIM' ? (
+                        {String(selected.whatsappEnviado || '').trim().toUpperCase() === 'SIM' ? (
                             <button
                                 disabled={actionLoading}
                                 onClick={() => handleMarcarWhatsAppEnviado(selected.protocolo, 'NÃO')}
@@ -358,7 +369,7 @@ export default function Solicitacoes() {
                             </button>
                         ) : (
                             <button
-                                disabled={actionLoading}
+                                disabled={actionLoading || String(selected.whatsappEnviado || '').trim().toUpperCase() === 'SIM'}
                                 onClick={() => handleMarcarWhatsAppEnviado(selected.protocolo, 'SIM')}
                                 className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium px-4 py-2 rounded-xl text-sm flex items-center gap-1.5 transition-colors disabled:opacity-50"
                             >
