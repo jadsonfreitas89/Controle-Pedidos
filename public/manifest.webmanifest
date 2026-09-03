@@ -2,6 +2,7 @@
   "name": "Controle de Pedidos",
   "short_name": "Pedidos",
   "description": "Sistema de Controle de Pedidos",
+  "lang": "pt-BR",
   "display": "standalone",
   "start_url": "/",
   "scope": "/",
