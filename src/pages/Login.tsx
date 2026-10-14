@@ -1,4 +1,5 @@
 import { useState, FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Lock, User, Package, AlertCircle, Loader2 } from 'lucide-react';
 
@@ -215,9 +216,17 @@ export default function Login() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                Senha
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Senha
+                </label>
+                <Link
+                  to="/recuperar-senha"
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline transition-colors"
+                >
+                  Esqueci minha senha
+                </Link>
+              </div>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                   <Lock size={18} />

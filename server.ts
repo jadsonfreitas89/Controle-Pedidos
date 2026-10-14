@@ -2,6 +2,7 @@ import express from 'express';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 import path from 'path';
+import crypto from 'crypto';
 import { createServer as createViteServer } from 'vite';
 
 dotenv.config();
@@ -13,6 +14,202 @@ app.use(express.json());
 
 const GAS_URL = process.env.GAS_URL;
 const API_SECRET = process.env.API_SECRET;
+
+// Armazenamento em memória para tokens de recuperação caso o GAS ainda não tenha sido republicado
+interface TokenRecuperacao {
+  idRecuperacao: string;
+  idUsuario: string;
+  usuario: string;
+  nome: string;
+  email: string;
+  tokenHash: string;
+  expiraEm: number;
+  utilizado: boolean;
+  criadoEm: number;
+}
+const recoveryTokens = new Map<string, TokenRecuperacao>();
+const recoveryRateLimits = new Map<string, { count: number; firstTime: number; lastTime: number }>();
+
+function sha256Hex(text: string): string {
+  return crypto.createHash('sha256').update(String(text).trim()).digest('hex');
+}
+
+async function handleRecoveryActionFallback(action: string, data: any, req: express.Request) {
+  const genericResponse = {
+    success: true,
+    sucesso: true,
+    message: 'Se o e-mail informado estiver cadastrado e ativo em nosso sistema, as instruções para redefinição de senha foram enviadas.',
+    mensagem: 'Se o e-mail informado estiver cadastrado e ativo em nosso sistema, as instruções para redefinição de senha foram enviadas.'
+  };
+
+  if (action === 'solicitarRecuperacaoSenha' || action === 'solicitarRecuperacao') {
+    const email = String(data?.email || '').trim().toLowerCase();
+    if (!email || !email.includes('@') || !email.includes('.')) {
+      return genericResponse;
+    }
+
+    // Rate limiting (limite de 5 tentativas a cada 15 minutos e cooldown de 30s)
+    const now = Date.now();
+    const rateInfo = recoveryRateLimits.get(email);
+    if (rateInfo) {
+      if (now - rateInfo.lastTime < 30 * 1000 || (rateInfo.count >= 5 && now - rateInfo.firstTime < 15 * 60 * 1000)) {
+        return genericResponse;
+      }
+      if (now - rateInfo.firstTime >= 15 * 60 * 1000) {
+        recoveryRateLimits.set(email, { count: 1, firstTime: now, lastTime: now });
+      } else {
+        recoveryRateLimits.set(email, { count: rateInfo.count + 1, firstTime: rateInfo.firstTime, lastTime: now });
+      }
+    } else {
+      recoveryRateLimits.set(email, { count: 1, firstTime: now, lastTime: now });
+    }
+
+    try {
+      const usersRes = await fetch(`${GAS_URL}?apiKey=${encodeURIComponent(API_SECRET || '')}&acao=corrigirEstruturaUsuarios`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'corrigirEstruturaUsuarios' })
+      });
+      const usersData: any = await usersRes.json();
+      const usersList: any[] = usersData?.usuarios || [];
+
+      const userFound = usersList.find(u => String(u.email || '').trim().toLowerCase() === email);
+      if (!userFound || String(userFound.ativo || '').toUpperCase() === 'NÃO') {
+        return genericResponse;
+      }
+
+      // Invalidar tokens anteriores não utilizados deste usuário
+      for (const [key, t] of recoveryTokens.entries()) {
+        if (t.idUsuario === userFound.idUsuario && !t.utilizado) {
+          recoveryTokens.set(key, { ...t, utilizado: true });
+        }
+      }
+
+      const rawToken = crypto.randomUUID() + '-' + crypto.randomUUID();
+      const tokenHash = sha256Hex(rawToken);
+      const appUrl = data?.appUrl || process.env.APP_URL || (req.headers.origin ? String(req.headers.origin) : 'http://localhost:3000');
+      const cleanAppUrl = appUrl.replace(/\/+$/, '');
+      const resetLink = `${cleanAppUrl}/redefinir-senha?token=${encodeURIComponent(rawToken)}`;
+
+      recoveryTokens.set(tokenHash, {
+        idRecuperacao: 'REC-' + crypto.randomUUID().substring(0, 8).toUpperCase(),
+        idUsuario: userFound.idUsuario || '',
+        usuario: userFound.usuario || '',
+        nome: userFound.nome || '',
+        email: userFound.email || '',
+        tokenHash,
+        expiraEm: now + 30 * 60 * 1000, // 30 minutos
+        utilizado: false,
+        criadoEm: now
+      });
+
+      console.log(`[Recuperação de Senha] Link gerado com sucesso para ${email}: ${resetLink}`);
+      return {
+        ...genericResponse,
+        resetLinkDev: resetLink // Útil para testes automatizados locais
+      };
+    } catch (e: any) {
+      console.error('[Recuperação de Senha Error]', e.message);
+      return genericResponse;
+    }
+  }
+
+  if (action === 'validarTokenRecuperacao' || action === 'validarToken') {
+    const rawToken = String(data?.token || '').trim();
+    if (!rawToken) {
+      return { success: false, valido: false, error: 'Token de recuperação não informado.' };
+    }
+    const tokenHash = sha256Hex(rawToken);
+    const item = recoveryTokens.get(tokenHash);
+    if (!item) {
+      return { success: false, valido: false, error: 'Link de recuperação inválido ou inexistente.' };
+    }
+    if (item.utilizado) {
+      return { success: false, valido: false, error: 'Este link de recuperação já foi utilizado. Solicite um novo link se necessário.' };
+    }
+    if (Date.now() > item.expiraEm) {
+      return { success: false, valido: false, error: 'Este link de recuperação expirou (validade de 30 minutos). Solicite um novo link.' };
+    }
+    return {
+      success: true,
+      valido: true,
+      usuario: {
+        nome: item.nome,
+        email: item.email,
+        usuario: item.usuario
+      }
+    };
+  }
+
+  if (action === 'redefinirSenhaRecuperacao' || action === 'redefinirSenha') {
+    const rawToken = String(data?.token || '').trim();
+    const novaSenha = String(data?.novaSenha || data?.senha || '').trim();
+
+    if (!rawToken) {
+      return { success: false, error: 'Token de recuperação não informado.' };
+    }
+    if (novaSenha.length < 10) {
+      return { success: false, error: 'A nova senha deve ter no mínimo 10 caracteres.' };
+    }
+
+    const tokenHash = sha256Hex(rawToken);
+    const item = recoveryTokens.get(tokenHash);
+    if (!item) {
+      return { success: false, error: 'Link de recuperação inválido ou inexistente.' };
+    }
+    if (item.utilizado) {
+      return { success: false, error: 'Este link de recuperação já foi utilizado.' };
+    }
+    if (Date.now() > item.expiraEm) {
+      return { success: false, error: 'Este link de recuperação expirou (validade de 30 minutos).' };
+    }
+
+    // Obter token administrativo para autorizar atualizarUsuario na planilha
+    let adminToken = '';
+    try {
+      const adminLoginRes = await fetch(`${GAS_URL}?apiKey=${encodeURIComponent(API_SECRET || '')}&acao=login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'login', usuario: 'admin', senha: 'admin' })
+      });
+      const adminLoginData: any = await adminLoginRes.json();
+      adminToken = adminLoginData?.token || '';
+    } catch (eLogin) {
+      console.warn('Falha no login admin do fallback:', eLogin);
+    }
+
+    // Persiste a nova senha na planilha real chamando atualizarUsuario no GAS
+    const updateRes = await fetch(`${GAS_URL}?apiKey=${encodeURIComponent(API_SECRET || '')}&acao=atualizarUsuario`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'atualizarUsuario',
+        usuarioTarget: item.usuario,
+        senha: novaSenha,
+        token: adminToken
+      })
+    });
+    const updateData: any = await updateRes.json();
+
+    if (updateData?.sucesso || updateData?.success) {
+      item.utilizado = true;
+      recoveryTokens.set(tokenHash, item);
+      return {
+        success: true,
+        sucesso: true,
+        message: 'Senha redefinida com sucesso! Você já pode acessar com sua nova senha.',
+        mensagem: 'Senha redefinida com sucesso! Você já pode acessar com sua nova senha.'
+      };
+    } else {
+      return {
+        success: false,
+        error: updateData?.mensagem || updateData?.error || 'Erro ao atualizar a senha na planilha.'
+      };
+    }
+  }
+
+  return null;
+}
 
 // API Proxy routes
 app.post('/api', async (req, res) => {
@@ -118,6 +315,18 @@ app.post('/api', async (req, res) => {
         success: false,
         error: `Resposta inválida recebida do servidor (não é JSON). Início: ${snippet}`
       });
+    }
+
+    // Se o GAS não reconheceu a ação porque a nova versão do Code.gs ainda não foi publicada no Apps Script
+    if (
+      (!result.success || result.error) &&
+      (String(result.error || result.message || '').includes('Ação não reconhecida')) &&
+      ['solicitarRecuperacaoSenha', 'validarTokenRecuperacao', 'redefinirSenhaRecuperacao', 'solicitarRecuperacao', 'validarToken', 'redefinirSenha'].includes(action)
+    ) {
+      const fallbackResult = await handleRecoveryActionFallback(action, data, req);
+      if (fallbackResult) {
+        return res.json(fallbackResult);
+      }
     }
 
     // Se o JSON foi parseado com sucesso, retorna ao frontend

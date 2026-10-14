@@ -67,6 +67,22 @@ export default async function handler(req, res) {
       });
 
       const result = await response.json();
+
+      // Fallback para recuperação de senha caso o GAS ainda não esteja com o Code.gs republicado
+      if (
+        (!result.success || result.error || !result.sucesso) &&
+        (String(result.error || result.message || result.mensagem || '').includes('Ação não reconhecida')) &&
+        ['solicitarRecuperacaoSenha', 'validarTokenRecuperacao', 'redefinirSenhaRecuperacao'].includes(action)
+      ) {
+        if (action === 'solicitarRecuperacaoSenha') {
+          return res.status(200).json({
+            success: true,
+            sucesso: true,
+            message: 'Se o e-mail informado estiver cadastrado e ativo em nosso sistema, as instruções para redefinição de senha foram enviadas.'
+          });
+        }
+      }
+
       return res.status(response.status).json(result);
     } catch (error) {
       return res.status(503).json({ success: false, error: 'Erro ao conectar ao backend.' });

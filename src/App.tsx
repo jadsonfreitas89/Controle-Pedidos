@@ -14,6 +14,8 @@ import Usuarios from './pages/Usuarios';
 import WhatsApp from './pages/WhatsApp';
 import Login from './pages/Login';
 import PrimeiroAcesso from './pages/PrimeiroAcesso';
+import RecuperarSenha from './pages/RecuperarSenha';
+import RedefinirSenha from './pages/RedefinirSenha';
 
 function AppContent() {
   const { currentUser, isAdmin, isFirstAccess, setIsFirstAccess } = useAuth();
@@ -23,34 +25,41 @@ function AppContent() {
   }
 
   if (!currentUser) {
-    return <Login />;
+    return (
+      <Routes>
+        <Route path="/recuperar-senha" element={<RecuperarSenha />} />
+        <Route path="/redefinir-senha" element={<RedefinirSenha />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
   }
 
   return (
-    <Router>
-      <AppLayout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/solicitacoes" element={<Solicitacoes />} />
-          <Route path="/nova" element={<NovaSolicitacao />} />
-          <Route path="/itens" element={<Itens />} />
-          <Route 
-            path="/usuarios" 
-            element={isAdmin ? <Usuarios /> : <Navigate to="/" replace />} 
-          />
-          <Route path="/whatsapp" element={<WhatsApp />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </AppLayout>
-    </Router>
+    <AppLayout>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/solicitacoes" element={<Solicitacoes />} />
+        <Route path="/nova" element={<NovaSolicitacao />} />
+        <Route path="/itens" element={<Itens />} />
+        <Route 
+          path="/usuarios" 
+          element={isAdmin ? <Usuarios /> : <Navigate to="/" replace />} 
+        />
+        <Route path="/whatsapp" element={<WhatsApp />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </AppLayout>
   );
 }
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <Router>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </Router>
   );
 }
 

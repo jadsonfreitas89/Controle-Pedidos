@@ -46,6 +46,12 @@ export const api = {
   criarPrimeiroAdministrador: (dados: { nome: string; email: string; usuario: string; senha: string; confirmarSenha?: string }) => request('criarPrimeiroAdministrador', dados),
   login: (usuario: string, senha?: string) => request('login', { usuario, senha }),
   definirSenhaPrimeiroAcesso: (dados: { usuario: string; senha?: string; novaSenha?: string }) => request('definirSenhaPrimeiroAcesso', dados),
+  solicitarRecuperacaoSenha: (email: string, appUrl?: string) => 
+    request('solicitarRecuperacaoSenha', { email, appUrl: appUrl || (typeof window !== 'undefined' ? window.location.origin : '') }),
+  validarTokenRecuperacao: (token: string) => 
+    request('validarTokenRecuperacao', { token }),
+  redefinirSenhaRecuperacao: (token: string, novaSenha: string) => 
+    request('redefinirSenhaRecuperacao', { token, novaSenha }),
   logout: () => request('logout'),
   listarUsuarios: () => request('listarUsuarios'),
   cadastrarUsuario: (dados: { usuario: string; nome: string; email?: string; senha?: string; perfil: 'ADM' | 'USUARIO'; ativo?: 'SIM' | 'NÃO' }) => request('cadastrarUsuario', dados),

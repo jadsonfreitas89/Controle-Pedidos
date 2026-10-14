@@ -36,6 +36,7 @@ const CONFIG = {
   ABA_USUARIOS: 'USUARIOS',
   ABA_CONFIG: 'CONFIG',
   ABA_DASHBOARD: 'DASHBOARD',
+  ABA_RECUPERACAO_SENHA: 'RECUPERACAO_SENHA',
 
   PREFIXO: 'SOL',
 
@@ -2218,6 +2219,474 @@ function invalidarSessoesUsuario_(idUsuario, nomeUsuario) {
     console.log('Sessões invalidadas para o usuário ' + idUsuario + '/' + nomeUsuario + ': ' + count);
   } catch (err) {
     console.warn('Erro ao invalidar sessoes do usuario: ' + err.message);
+  }
+}
+}
+
+
+// ============================================================
+// MÓDULO DE RECUPERAÇÃO DE SENHA
+// ============================================================
+
+function obterAbaRecuperacaoSenha_(ss) {
+  var nomeAba = CONFIG.ABA_RECUPERACAO_SENHA || 'RECUPERACAO_SENHA';
+  var sheet = ss.getSheetByName(nomeAba);
+  if (!sheet) {
+    sheet = ss.insertSheet(nomeAba);
+    var cabecalhos = [
+      'ID_RECUPERACAO',
+      'ID_USUARIO',
+      'TOKEN_HASH',
+      'EXPIRA_EM',
+      'UTILIZADO',
+      'DATA_CRIACAO'
+    ];
+    sheet.getRange(1, 1, 1, cabecalhos.length).setValues([cabecalhos]);
+    sheet.getRange(1, 1, 1, cabecalhos.length).setFontWeight('bold');
+  }
+  return sheet;
+}
+
+function solicitarRecuperacaoSenha(email, appUrl) {
+  var emailNorm = String(email || '').trim().toLowerCase();
+  
+  // Resposta padrão genérica para prevenir enumeração de contas
+  var respostaPadrao = {
+    sucesso: true,
+    mensagem: 'Se o e-mail informado estiver cadastrado e ativo em nosso sistema, as instruções para redefinição de senha foram enviadas.'
+  };
+
+  if (!emailNorm || emailNorm.indexOf('@') === -1 || emailNorm.indexOf('.') === -1) {
+    return respostaPadrao;
+  }
+
+  // Proteção contra abuso / Rate Limiting por e-mail (ScriptProperties)
+  try {
+    var props = PropertiesService.getScriptProperties();
+    var rateKey = 'RATE_RECUPERAR_' + gerarSenhaHash_(emailNorm).substring(0, 16);
+    var rateRaw = props.getProperty(rateKey);
+    var agoraMs = new Date().getTime();
+    if (rateRaw) {
+      var rateInfo = JSON.parse(rateRaw);
+      // Cooldown de 30s ou limite de 5 tentativas em 15min
+      if (agoraMs - rateInfo.lastTime < 30 * 1000 || (rateInfo.count >= 5 && (agoraMs - rateInfo.firstTime < 15 * 60 * 1000))) {
+        return respostaPadrao;
+      }
+      if (agoraMs - rateInfo.firstTime >= 15 * 60 * 1000) {
+        props.setProperty(rateKey, JSON.stringify({ count: 1, firstTime: agoraMs, lastTime: agoraMs }));
+      } else {
+        props.setProperty(rateKey, JSON.stringify({ count: rateInfo.count + 1, firstTime: rateInfo.firstTime, lastTime: agoraMs }));
+      }
+    } else {
+      props.setProperty(rateKey, JSON.stringify({ count: 1, firstTime: agoraMs, lastTime: agoraMs }));
+    }
+  } catch (errRate) {
+    console.warn('Aviso no controle de taxa: ' + errRate.message);
+  }
+
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(15000);
+  } catch (eLock) {
+    throw new Error('Servidor temporariamente ocupado. Tente novamente em alguns segundos.');
+  }
+
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheetUsuarios = ss.getSheetByName(CONFIG.ABA_USUARIOS);
+    if (!sheetUsuarios) {
+      return respostaPadrao;
+    }
+
+    var uLinha = obterUltimaLinhaReal_(sheetUsuarios, 1);
+    if (uLinha < 2) {
+      return respostaPadrao;
+    }
+
+    var colIdUsuario = 1;
+    var colNome = 2;
+    var colEmail = 3;
+    var colUsuario = 4;
+    var colSenhaHash = 5;
+    var colPerfil = 6;
+    var colAtivo = 7;
+
+    var headers = sheetUsuarios.getRange(1, 1, 1, Math.max(7, sheetUsuarios.getLastColumn())).getValues()[0] || [];
+    for (var h = 0; h < headers.length; h++) {
+      var hStr = String(headers[h] || '').trim().toUpperCase();
+      if (hStr === 'ID_USUARIO' || hStr === 'IDUSUARIO') colIdUsuario = h + 1;
+      else if (hStr === 'NOME') colNome = h + 1;
+      else if (hStr === 'E-MAIL' || hStr === 'EMAIL') colEmail = h + 1;
+      else if (hStr === 'USUARIO' || hStr === 'LOGIN') colUsuario = h + 1;
+      else if (hStr === 'SENHA_HASH' || hStr === 'SENHAHASH') colSenhaHash = h + 1;
+      else if (hStr === 'PERFIL') colPerfil = h + 1;
+      else if (hStr === 'ATIVO') colAtivo = h + 1;
+    }
+
+    var dadosUsuarios = sheetUsuarios.getRange(2, 1, uLinha - 1, Math.max(7, sheetUsuarios.getLastColumn())).getValues();
+    var usuarioEncontrado = null;
+
+    for (var i = 0; i < dadosUsuarios.length; i++) {
+      var row = dadosUsuarios[i];
+      var uMail = String(row[colEmail - 1] || '').trim().toLowerCase();
+      var uAtivoRaw = row[colAtivo - 1];
+      var uAtivo = (uAtivoRaw !== false && String(uAtivoRaw).trim().toUpperCase() !== 'NÃO' && String(uAtivoRaw).trim().toUpperCase() !== 'NAO') ? 'SIM' : 'NÃO';
+
+      if (uMail === emailNorm) {
+        if (uAtivo === 'SIM') {
+          usuarioEncontrado = {
+            idUsuario: String(row[colIdUsuario - 1] || ('USR-' + (i + 1))).trim(),
+            nome: String(row[colNome - 1] || '').trim(),
+            email: uMail,
+            usuario: String(row[colUsuario - 1] || '').trim(),
+            linha: i + 2
+          };
+        }
+        break;
+      }
+    }
+
+    if (!usuarioEncontrado) {
+      return respostaPadrao;
+    }
+
+    var sheetRecuperacao = obterAbaRecuperacaoSenha_(ss);
+    var uLinhaRec = obterUltimaLinhaReal_(sheetRecuperacao, 1);
+
+    // Invalidar tokens pendentes anteriores deste mesmo usuário
+    if (uLinhaRec >= 2) {
+      var dadosRec = sheetRecuperacao.getRange(2, 1, uLinhaRec - 1, 6).getValues();
+      for (var r = 0; r < dadosRec.length; r++) {
+        var recIdUser = String(dadosRec[r][1] || '').trim();
+        var recUtilizado = String(dadosRec[r][4] || '').trim().toUpperCase();
+        if (recIdUser === usuarioEncontrado.idUsuario && recUtilizado === 'NÃO') {
+          sheetRecuperacao.getRange(r + 2, 5).setValue('SUBSTITUIDO');
+        }
+      }
+    }
+
+    // Gerar token seguro com alta entropia (dois UUIDs combinados)
+    var rawToken = Utilities.getUuid() + '-' + Utilities.getUuid();
+    var tokenHash = gerarSenhaHash_(rawToken);
+    var agora = new Date();
+    var expiraEmDate = new Date(agora.getTime() + 30 * 60 * 1000); // 30 minutos
+    var expiraEmIso = expiraEmDate.toISOString();
+    var dataCriacaoIso = agora.toISOString();
+    var idRecuperacao = 'REC-' + Utilities.getUuid().substring(0, 8).toUpperCase();
+
+    // Gravar nova solicitação de recuperação
+    sheetRecuperacao.appendRow([
+      idRecuperacao,
+      usuarioEncontrado.idUsuario,
+      tokenHash,
+      expiraEmIso,
+      'NÃO',
+      dataCriacaoIso
+    ]);
+
+    // Enviar e-mail com link usando MailApp
+    var baseUrl = String(appUrl || '').trim();
+    if (!baseUrl) {
+      baseUrl = PropertiesService.getScriptProperties().getProperty('APP_URL') || '';
+    }
+    if (!baseUrl) {
+      baseUrl = 'https://ais-dev-tjq4ysewkyalpskx7naabg-824129572980.us-east1.run.app';
+    }
+    baseUrl = baseUrl.replace(/\/+$/, '');
+    var linkRedefinicao = baseUrl + '/redefinir-senha?token=' + encodeURIComponent(rawToken);
+
+    var corpoHtml = 
+      '<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">' +
+      '  <div style="text-align: center; margin-bottom: 24px;">' +
+      '    <h2 style="color: #1e293b; margin: 0; font-size: 22px;">Controle de Pedidos</h2>' +
+      '    <p style="color: #64748b; font-size: 14px; margin-top: 4px;">Recuperação de Senha de Acesso</p>' +
+      '  </div>' +
+      '  <p style="color: #334155; font-size: 15px; line-height: 1.5;">Olá, <strong>' + usuarioEncontrado.nome + '</strong>,</p>' +
+      '  <p style="color: #334155; font-size: 15px; line-height: 1.5;">Recebemos uma solicitação para redefinir a sua senha no sistema Controle de Pedidos. Clique no botão abaixo para criar uma nova senha:</p>' +
+      '  <div style="text-align: center; margin: 32px 0;">' +
+      '    <a href="' + linkRedefinicao + '" style="background-color: #2563eb; color: #ffffff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px; display: inline-block;">REDEFINIR MINHA SENHA</a>' +
+      '  </div>' +
+      '  <p style="color: #64748b; font-size: 13px; line-height: 1.5;">Se o botão não funcionar, copie e cole o link a seguir no seu navegador:</p>' +
+      '  <p style="color: #2563eb; font-size: 12px; word-break: break-all;"><a href="' + linkRedefinicao + '">' + linkRedefinicao + '</a></p>' +
+      '  <div style="margin-top: 32px; padding-top: 20px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8; text-align: center;">' +
+      '    <p style="margin: 0;">Este link é válido por <strong>30 minutos</strong>. Se você não solicitou esta redefinição, apenas desconsidere esta mensagem.</p>' +
+      '  </div>' +
+      '</div>';
+
+    var corpoTexto = 
+      'Controle de Pedidos - Recuperação de Senha\n\n' +
+      'Olá, ' + usuarioEncontrado.nome + ',\n\n' +
+      'Recebemos uma solicitação para redefinir a sua senha no sistema Controle de Pedidos.\n' +
+      'Acesse o link abaixo para criar sua nova senha (válido por 30 minutos):\n\n' +
+      linkRedefinicao + '\n\n' +
+      'Se você não solicitou esta redefinição, por favor desconsidere este e-mail.';
+
+    try {
+      MailApp.sendEmail({
+        to: usuarioEncontrado.email,
+        subject: 'Recuperação de Senha - Controle de Pedidos',
+        htmlBody: corpoHtml,
+        body: corpoTexto
+      });
+      console.log('E-mail de recuperação enviado com sucesso para: ' + usuarioEncontrado.email);
+    } catch (errEmail) {
+      console.error('Falha ao enviar e-mail via MailApp: ' + errEmail.message);
+    }
+
+    return respostaPadrao;
+
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function validarTokenRecuperacao(token) {
+  var rawToken = String(token || '').trim();
+  if (!rawToken) {
+    return {
+      sucesso: false,
+      valido: false,
+      erro: 'Token de recuperação não informado.'
+    };
+  }
+
+  var tokenHash = gerarSenhaHash_(rawToken);
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetRec = ss.getSheetByName(CONFIG.ABA_RECUPERACAO_SENHA || 'RECUPERACAO_SENHA');
+  if (!sheetRec) {
+    return {
+      sucesso: false,
+      valido: false,
+      erro: 'Link de recuperação inválido ou inexistente.'
+    };
+  }
+
+  var uLinhaRec = obterUltimaLinhaReal_(sheetRec, 1);
+  if (uLinhaRec < 2) {
+    return {
+      sucesso: false,
+      valido: false,
+      erro: 'Link de recuperação inválido ou inexistente.'
+    };
+  }
+
+  var dadosRec = sheetRec.getRange(2, 1, uLinhaRec - 1, 6).getValues();
+  var itemEncontrado = null;
+
+  for (var i = 0; i < dadosRec.length; i++) {
+    var row = dadosRec[i];
+    var rHash = String(row[2] || '').trim();
+    if (rHash === tokenHash) {
+      itemEncontrado = {
+        idRecuperacao: String(row[0] || '').trim(),
+        idUsuario: String(row[1] || '').trim(),
+        expiraEm: String(row[3] || '').trim(),
+        utilizado: String(row[4] || '').trim().toUpperCase(),
+        linha: i + 2
+      };
+      break;
+    }
+  }
+
+  if (!itemEncontrado) {
+    return {
+      sucesso: false,
+      valido: false,
+      erro: 'Link de recuperação inválido ou inexistente.'
+    };
+  }
+
+  if (itemEncontrado.utilizado !== 'NÃO') {
+    return {
+      sucesso: false,
+      valido: false,
+      erro: 'Este link de recuperação já foi utilizado. Solicite um novo link se necessário.'
+    };
+  }
+
+  var expiraEmMs = new Date(itemEncontrado.expiraEm).getTime();
+  var agoraMs = new Date().getTime();
+  if (isNaN(expiraEmMs) || agoraMs > expiraEmMs) {
+    return {
+      sucesso: false,
+      valido: false,
+      erro: 'Este link de recuperação expirou (validade de 30 minutos). Solicite um novo link.'
+    };
+  }
+
+  // Verificar se o usuário existe e está ativo
+  var sheetUsuarios = ss.getSheetByName(CONFIG.ABA_USUARIOS);
+  if (!sheetUsuarios) {
+    return {
+      sucesso: false,
+      valido: false,
+      erro: 'Usuário não encontrado.'
+    };
+  }
+
+  var uLinhaUsers = obterUltimaLinhaReal_(sheetUsuarios, 1);
+  var dadosUsers = sheetUsuarios.getRange(2, 1, uLinhaUsers - 1, Math.max(7, sheetUsuarios.getLastColumn())).getValues();
+  var userNome = '';
+  var userEmail = '';
+  var userLogin = '';
+  var userAtivo = false;
+
+  for (var u = 0; u < dadosUsers.length; u++) {
+    var uRow = dadosUsers[u];
+    var uId = String(uRow[0] || '').trim();
+    if (uId === itemEncontrado.idUsuario) {
+      userNome = String(uRow[1] || '').trim();
+      userEmail = String(uRow[2] || '').trim();
+      userLogin = String(uRow[3] || '').trim();
+      var rawAct = uRow[6];
+      userAtivo = (rawAct !== false && String(rawAct).trim().toUpperCase() !== 'NÃO' && String(rawAct).trim().toUpperCase() !== 'NAO');
+      break;
+    }
+  }
+
+  if (!userNome || !userAtivo) {
+    return {
+      sucesso: false,
+      valido: false,
+      erro: 'A conta associada a este link está inativa ou não foi encontrada.'
+    };
+  }
+
+  return {
+    sucesso: true,
+    valido: true,
+    usuario: {
+      nome: userNome,
+      email: userEmail,
+      usuario: userLogin
+    }
+  };
+}
+
+function redefinirSenhaRecuperacao(token, novaSenha) {
+  var rawToken = String(token || '').trim();
+  if (!rawToken) {
+    throw new Error('Token de recuperação não informado.');
+  }
+
+  var senhaStr = String(novaSenha || '').trim();
+  if (senhaStr.length < 10) {
+    throw new Error('A nova senha deve ter no mínimo 10 caracteres.');
+  }
+
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(15000);
+  } catch (eLock) {
+    throw new Error('Servidor ocupado. Tente novamente em alguns segundos.');
+  }
+
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheetRec = ss.getSheetByName(CONFIG.ABA_RECUPERACAO_SENHA || 'RECUPERACAO_SENHA');
+    if (!sheetRec) {
+      throw new Error('Link de recuperação inválido ou inexistente.');
+    }
+
+    var tokenHash = gerarSenhaHash_(rawToken);
+    var uLinhaRec = obterUltimaLinhaReal_(sheetRec, 1);
+    if (uLinhaRec < 2) {
+      throw new Error('Link de recuperação inválido ou inexistente.');
+    }
+
+    var dadosRec = sheetRec.getRange(2, 1, uLinhaRec - 1, 6).getValues();
+    var itemRec = null;
+
+    for (var i = 0; i < dadosRec.length; i++) {
+      var row = dadosRec[i];
+      if (String(row[2] || '').trim() === tokenHash) {
+        itemRec = {
+          idRecuperacao: String(row[0] || '').trim(),
+          idUsuario: String(row[1] || '').trim(),
+          expiraEm: String(row[3] || '').trim(),
+          utilizado: String(row[4] || '').trim().toUpperCase(),
+          linha: i + 2
+        };
+        break;
+      }
+    }
+
+    if (!itemRec) {
+      throw new Error('Link de recuperação inválido ou inexistente.');
+    }
+
+    if (itemRec.utilizado !== 'NÃO') {
+      throw new Error('Este link de recuperação já foi utilizado. Solicite um novo se necessário.');
+    }
+
+    var expiraEmMs = new Date(itemRec.expiraEm).getTime();
+    var agoraMs = new Date().getTime();
+    if (isNaN(expiraEmMs) || agoraMs > expiraEmMs) {
+      throw new Error('Este link de recuperação expirou (validade de 30 minutos). Solicite um novo link.');
+    }
+
+    // Localizar usuário na aba USUARIOS
+    var sheetUsuarios = ss.getSheetByName(CONFIG.ABA_USUARIOS);
+    if (!sheetUsuarios) {
+      throw new Error('A aba USUARIOS não existe.');
+    }
+
+    var uLinhaUsers = obterUltimaLinhaReal_(sheetUsuarios, 1);
+    var colIdUsuario = 1;
+    var colSenhaHash = 5;
+    var colUsuario = 4;
+    var colAtivo = 7;
+
+    var headers = sheetUsuarios.getRange(1, 1, 1, Math.max(7, sheetUsuarios.getLastColumn())).getValues()[0] || [];
+    for (var h = 0; h < headers.length; h++) {
+      var hStr = String(headers[h] || '').trim().toUpperCase();
+      if (hStr === 'ID_USUARIO' || hStr === 'IDUSUARIO') colIdUsuario = h + 1;
+      else if (hStr === 'SENHA_HASH' || hStr === 'SENHAHASH') colSenhaHash = h + 1;
+      else if (hStr === 'USUARIO' || hStr === 'LOGIN') colUsuario = h + 1;
+      else if (hStr === 'ATIVO') colAtivo = h + 1;
+    }
+
+    var dadosUsers = sheetUsuarios.getRange(2, 1, uLinhaUsers - 1, Math.max(7, sheetUsuarios.getLastColumn())).getValues();
+    var userLinha = -1;
+    var userLogin = '';
+    var userAtivo = false;
+
+    for (var u = 0; u < dadosUsers.length; u++) {
+      var uRow = dadosUsers[u];
+      if (String(uRow[colIdUsuario - 1] || '').trim() === itemRec.idUsuario) {
+        userLinha = u + 2;
+        userLogin = String(uRow[colUsuario - 1] || '').trim();
+        var rawAct = uRow[colAtivo - 1];
+        userAtivo = (rawAct !== false && String(rawAct).trim().toUpperCase() !== 'NÃO' && String(rawAct).trim().toUpperCase() !== 'NAO');
+        break;
+      }
+    }
+
+    if (userLinha === -1) {
+      throw new Error('Usuário associado a este link não foi localizado.');
+    }
+
+    if (!userAtivo) {
+      throw new Error('A conta deste usuário está inativa. Contate o administrador.');
+    }
+
+    // Atualizar SENHA_HASH com o hash SHA-256 da nova senha
+    var novoHash = gerarSenhaHash_(senhaStr);
+    sheetUsuarios.getRange(userLinha, colSenhaHash).setValue(novoHash);
+
+    // Marcar token como UTILIZADO = 'SIM' na aba RECUPERACAO_SENHA
+    sheetRec.getRange(itemRec.linha, 5).setValue('SIM');
+
+    // Invalidar sessões ativas existentes do usuário
+    invalidarSessoesUsuario_(itemRec.idUsuario, userLogin);
+
+    return {
+      sucesso: true,
+      mensagem: 'Senha redefinida com sucesso! Você já pode acessar com sua nova senha.'
+    };
+
+  } finally {
+    lock.releaseLock();
   }
 }
 
@@ -7708,6 +8177,44 @@ function executarAcaoApi_(
     const senha = obterParametroApi_(parametros, corpo, 'senha') || obterParametroApi_(parametros, corpo, 'novaSenha');
 
     const resultado = definirSenhaPrimeiroAcesso(usuario, senha);
+    return {
+      sucesso: true,
+      ...resultado
+    };
+  }
+
+  if (
+    nomeAcao === 'solicitarrecuperacaosenha' ||
+    nomeAcao === 'solicitarrecuperacao'
+  ) {
+    const email = obterParametroApi_(parametros, corpo, 'email');
+    const appUrl = obterParametroApi_(parametros, corpo, 'appUrl');
+    const resultado = solicitarRecuperacaoSenha(email, appUrl);
+    return {
+      sucesso: true,
+      ...resultado
+    };
+  }
+
+  if (
+    nomeAcao === 'validartokenrecuperacao' ||
+    nomeAcao === 'validartoken'
+  ) {
+    const token = obterParametroApi_(parametros, corpo, 'token');
+    const resultado = validarTokenRecuperacao(token);
+    return {
+      sucesso: true,
+      ...resultado
+    };
+  }
+
+  if (
+    nomeAcao === 'redefinirsenharecuperacao' ||
+    nomeAcao === 'redefinirsenha'
+  ) {
+    const token = obterParametroApi_(parametros, corpo, 'token');
+    const novaSenha = obterParametroApi_(parametros, corpo, 'novaSenha') || obterParametroApi_(parametros, corpo, 'senha');
+    const resultado = redefinirSenhaRecuperacao(token, novaSenha);
     return {
       sucesso: true,
       ...resultado
