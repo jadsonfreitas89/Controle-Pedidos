@@ -8200,7 +8200,7 @@ function executarAcaoApi_(
     nomeAcao === 'validartokenrecuperacao' ||
     nomeAcao === 'validartoken'
   ) {
-    const token = obterParametroApi_(parametros, corpo, 'token');
+    const token = obterParametroApi_(parametros, corpo, 'token') || obterParametroApi_(parametros, corpo, 'tokenRecuperacao');
     const resultado = validarTokenRecuperacao(token);
     return {
       sucesso: true,
@@ -8212,7 +8212,7 @@ function executarAcaoApi_(
     nomeAcao === 'redefinirsenharecuperacao' ||
     nomeAcao === 'redefinirsenha'
   ) {
-    const token = obterParametroApi_(parametros, corpo, 'token');
+    const token = obterParametroApi_(parametros, corpo, 'token') || obterParametroApi_(parametros, corpo, 'tokenRecuperacao');
     const novaSenha = obterParametroApi_(parametros, corpo, 'novaSenha') || obterParametroApi_(parametros, corpo, 'senha');
     const resultado = redefinirSenhaRecuperacao(token, novaSenha);
     return {

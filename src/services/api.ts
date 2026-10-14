@@ -14,11 +14,14 @@ async function request(action: string, data: any = {}) {
     // Ignore error
   }
 
-  const token = userSession?.token || localStorage.getItem('auth_token') || '';
+  const sessionToken = userSession?.token || localStorage.getItem('auth_token') || '';
+
+  // Preserva o token passado explicitamente nos dados (ex: recuperação de senha), evitando sobrescrita por sessão vazia
+  const effectiveToken = (data && typeof data.token === 'string' && data.token.trim()) ? data.token.trim() : sessionToken;
 
   const payloadData = {
+    token: effectiveToken,
     ...data,
-    token,
     usuarioLogado: userSession?.usuario || userSession?.nome || 'SISTEMA',
     perfilLogado: userSession?.perfil || 'USUARIO'
   };
@@ -49,9 +52,9 @@ export const api = {
   solicitarRecuperacaoSenha: (email: string, appUrl?: string) => 
     request('solicitarRecuperacaoSenha', { email, appUrl: appUrl || (typeof window !== 'undefined' ? window.location.origin : '') }),
   validarTokenRecuperacao: (token: string) => 
-    request('validarTokenRecuperacao', { token }),
+    request('validarTokenRecuperacao', { token, tokenRecuperacao: token }),
   redefinirSenhaRecuperacao: (token: string, novaSenha: string) => 
-    request('redefinirSenhaRecuperacao', { token, novaSenha }),
+    request('redefinirSenhaRecuperacao', { token, tokenRecuperacao: token, novaSenha }),
   logout: () => request('logout'),
   listarUsuarios: () => request('listarUsuarios'),
   cadastrarUsuario: (dados: { usuario: string; nome: string; email?: string; senha?: string; perfil: 'ADM' | 'USUARIO'; ativo?: 'SIM' | 'NÃO' }) => request('cadastrarUsuario', dados),

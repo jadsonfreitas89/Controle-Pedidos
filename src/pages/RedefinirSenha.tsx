@@ -6,7 +6,32 @@ import { Lock, CheckCircle2, AlertCircle, Loader2, KeyRound, ArrowLeft, ShieldCh
 export default function RedefinirSenha() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const token = searchParams.get('token') || '';
+
+  // Extração robusta do token de query params (searchParams do React Router, window.location.search ou hash)
+  const token = (() => {
+    let t = searchParams.get('token') || searchParams.get('t');
+    if (t && t.trim()) return t.trim();
+
+    if (typeof window !== 'undefined') {
+      try {
+        const directParams = new URLSearchParams(window.location.search);
+        t = directParams.get('token') || directParams.get('t');
+        if (t && t.trim()) return t.trim();
+      } catch (e) {}
+
+      try {
+        const hash = window.location.hash || '';
+        if (hash.includes('token=')) {
+          const qIdx = hash.indexOf('?');
+          const hashQuery = qIdx !== -1 ? hash.substring(qIdx) : '?' + hash.replace(/^#\/?/, '');
+          const hashParams = new URLSearchParams(hashQuery);
+          t = hashParams.get('token') || hashParams.get('t');
+          if (t && t.trim()) return t.trim();
+        }
+      } catch (e) {}
+    }
+    return '';
+  })();
 
   const [validating, setValidating] = useState(true);
   const [tokenValido, setTokenValido] = useState(false);
@@ -35,12 +60,13 @@ export default function RedefinirSenha() {
       try {
         const res = await api.validarTokenRecuperacao(token);
         if (isMounted) {
-          if (res.valido || res.success || res.sucesso) {
+          const isValido = (res.valido === true || (res.valido !== false && (res.success || res.sucesso))) && !res.error && !res.erro;
+          if (isValido) {
             setTokenValido(true);
             setUsuarioInfo(res.usuario || null);
           } else {
             setTokenValido(false);
-            setTokenError(res.error || res.mensagem || 'Este link de recuperação é inválido ou expirou.');
+            setTokenError(res.error || res.erro || res.mensagem || res.message || 'Este link de recuperação é inválido ou expirou.');
           }
         }
       } catch (err: any) {
@@ -85,10 +111,10 @@ export default function RedefinirSenha() {
 
     try {
       const res = await api.redefinirSenhaRecuperacao(token, novaSenha);
-      if (res.success || res.sucesso) {
+      if ((res.success || res.sucesso) && !res.error && !res.erro) {
         setSucesso(true);
       } else {
-        setFormError(res.error || res.mensagem || 'Não foi possível redefinir a senha. O link pode ter expirado.');
+        setFormError(res.error || res.erro || res.mensagem || res.message || 'Não foi possível redefinir a senha. O link pode ter expirado.');
       }
     } catch (err: any) {
       setFormError(err.message || 'Erro ao conectar com o servidor.');

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import AppLayout from './components/layout/AppLayout';
 import Dashboard from './pages/Dashboard';
@@ -19,6 +19,16 @@ import RedefinirSenha from './pages/RedefinirSenha';
 
 function AppContent() {
   const { currentUser, isAdmin, isFirstAccess, setIsFirstAccess } = useAuth();
+  const location = useLocation();
+
+  // Rotas de recuperação e redefinição de senha sempre disponíveis e preservando query parameters
+  if (location.pathname.startsWith('/redefinir-senha')) {
+    return <RedefinirSenha />;
+  }
+
+  if (location.pathname.startsWith('/recuperar-senha')) {
+    return <RecuperarSenha />;
+  }
 
   if (isFirstAccess) {
     return <PrimeiroAcesso onSuccess={() => setIsFirstAccess(false)} />;

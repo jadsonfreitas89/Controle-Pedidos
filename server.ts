@@ -115,7 +115,7 @@ async function handleRecoveryActionFallback(action: string, data: any, req: expr
   }
 
   if (action === 'validarTokenRecuperacao' || action === 'validarToken') {
-    const rawToken = String(data?.token || '').trim();
+    const rawToken = String(data?.token || data?.tokenRecuperacao || (req.body && req.body.token) || (req.body && req.body.tokenRecuperacao) || '').trim();
     if (!rawToken) {
       return { success: false, valido: false, error: 'Token de recuperação não informado.' };
     }
@@ -142,8 +142,8 @@ async function handleRecoveryActionFallback(action: string, data: any, req: expr
   }
 
   if (action === 'redefinirSenhaRecuperacao' || action === 'redefinirSenha') {
-    const rawToken = String(data?.token || '').trim();
-    const novaSenha = String(data?.novaSenha || data?.senha || '').trim();
+    const rawToken = String(data?.token || data?.tokenRecuperacao || (req.body && req.body.token) || (req.body && req.body.tokenRecuperacao) || '').trim();
+    const novaSenha = String(data?.novaSenha || data?.senha || (req.body && req.body.novaSenha) || (req.body && req.body.senha) || '').trim();
 
     if (!rawToken) {
       return { success: false, error: 'Token de recuperação não informado.' };
