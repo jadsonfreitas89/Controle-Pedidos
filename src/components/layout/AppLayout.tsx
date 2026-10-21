@@ -18,9 +18,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const filteredNavItems = navItems.filter(item => !item.adminOnly || isAdmin);
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-slate-50">
+    <div className="min-h-screen flex flex-col md:flex-row bg-slate-50 print:bg-white print:min-h-0 print:block">
       {/* Sidebar Desktop */}
-      <nav className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200 p-4 gap-2 justify-between">
+      <nav className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200 p-4 gap-2 justify-between print:hidden">
         <div>
           <h1 className="text-xl font-bold p-2 mb-2 text-slate-800 flex items-center gap-2">
             Controle Pedidos
@@ -70,9 +70,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       </nav>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-h-screen md:min-h-0">
+      <div className="flex-1 flex flex-col min-h-screen md:min-h-0 print:min-h-0 print:block">
         {/* Top Header Mobile */}
-        <header className="md:hidden bg-white border-b border-slate-200 p-3 flex justify-between items-center sticky top-0 z-40">
+        <header className="md:hidden bg-white border-b border-slate-200 p-3 flex justify-between items-center sticky top-0 z-40 print:hidden">
           <h1 className="font-bold text-slate-800 text-base">Controle Pedidos</h1>
           <div className="flex items-center gap-2">
             <span className="font-semibold text-slate-700 text-xs truncate max-w-[120px]">{currentUser?.nome}</span>
@@ -89,13 +89,13 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 p-4 md:p-8 mb-16 md:mb-0">
+        <main className="flex-1 p-4 md:p-8 mb-16 md:mb-0 print:p-0 print:m-0 print:mb-0 print:block">
           {children}
         </main>
       </div>
 
       {/* Bottom Nav Mobile */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around p-2 z-40">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around p-2 z-40 print:hidden">
         {filteredNavItems.map(item => (
           <NavLink key={item.path} to={item.path} className={({ isActive }) => `p-2 flex flex-col items-center ${isActive ? 'text-blue-700' : 'text-slate-500'}`}>
             <item.icon size={22} />

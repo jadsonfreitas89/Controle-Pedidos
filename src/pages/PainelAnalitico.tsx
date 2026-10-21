@@ -41,8 +41,10 @@ import {
   Info,
 } from 'lucide-react';
 import Card from '../components/ui/Card';
+import { useAuth } from '../context/AuthContext';
 
 export default function PainelAnalitico() {
+  const { currentUser } = useAuth();
   const [dadosBrutos, setDadosBrutos] = useState<Solicitacao[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -445,9 +447,11 @@ export default function PainelAnalitico() {
   }
 
   return (
-    <div className="space-y-6 pb-12">
-      {/* CABEÇALHO DO PAINEL DE ACOMPANHAMENTO DE PEDIDOS */}
-      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="space-y-6 pb-12 print:p-0 print:m-0 print:pb-0">
+      {/* CORPO DO PAINEL INTERATIVO NA TELA (ESCONDIDO NA IMPRESSÃO PARA NÃO DUPLICAR NEM POLUIR O PDF) */}
+      <div className="space-y-6 print:hidden">
+        {/* CABEÇALHO DO PAINEL DE ACOMPANHAMENTO DE PEDIDOS */}
+        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="p-2 bg-blue-50 text-blue-600 rounded-xl">
@@ -1442,10 +1446,12 @@ export default function PainelAnalitico() {
           </div>
         </div>
       </div>
+    </div>
+    {/* FIM DO CORPO DO PAINEL INTERATIVO NA TELA */}
 
-      {/* MODAL DE DETALHES COMPLETOS DA SOLICITAÇÃO */}
+      {/* MODAL DE DETALHES COMPLETOS DA SOLICITAÇÃO (ESCONDIDO NA IMPRESSÃO) */}
       {solicitacaoSelecionada && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 print:hidden">
           <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 border border-slate-200">
             <div className="flex justify-between items-center pb-4 border-b border-slate-100 mb-4">
               <div>
@@ -1584,220 +1590,402 @@ export default function PainelAnalitico() {
         </div>
       )}
 
-      {/* MODAL / TELA DE RELATÓRIO FORMATADO PARA IMPRESSÃO (PDF) */}
-      {exibirRelatorioImpressao && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-4 print:p-0 print:bg-white print:static print:block">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-y-auto p-6 sm:p-8 border border-slate-200 print:shadow-none print:border-none print:max-h-none print:p-6 print:w-full print:max-w-none">
-            {/* Barra de Ações do Relatório (escondida na impressão) */}
-            <div className="flex justify-between items-center pb-4 border-b border-slate-200 mb-6 print:hidden">
+      {/* =========================================================================
+          RELATÓRIO GERENCIAL COMPLETO PARA IMPRESSÃO E EXPORTAÇÃO EM PDF (A4)
+          Garante 100% dos dados, sem truncamento, cabeçalho repetido em quebras
+          de página e sem corte de linhas ao meio.
+          ========================================================================= */}
+      <div
+        className={
+          exibirRelatorioImpressao
+            ? 'fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto print:static print:inset-auto print:p-0 print:m-0 print:bg-white print:overflow-visible print:block print:w-full print:max-w-none print:shadow-none print:border-none print:z-auto'
+            : 'hidden print:block print:static print:inset-auto print:p-0 print:m-0 print:bg-white print:overflow-visible print:w-full print:max-w-none print:shadow-none print:border-none print:z-auto'
+        }
+      >
+        <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[95vh] overflow-y-auto p-6 sm:p-8 border border-slate-200 print:shadow-none print:border-none print:max-h-none print:overflow-visible print:p-0 print:m-0 print:w-full print:max-w-none print:rounded-none">
+          {/* BARRA DE AÇÕES E INSTRUÇÕES NA TELA (OCULTA NA IMPRESSÃO) */}
+          <div className="pb-4 border-b border-slate-200 mb-6 space-y-3 print:hidden">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <div className="flex items-center gap-2">
-                <Printer size={20} className="text-blue-600" />
-                <span className="font-bold text-slate-900 text-sm">Visualização de Impressão do Relatório</span>
+                <span className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+                  <Printer size={20} />
+                </span>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base">
+                    Visualização do Relatório Gerencial (PDF / Impressão A4)
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    O documento abaixo contém todos os indicadores, gráficos e os {dadosFiltrados.length} pedidos filtrados.
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
+
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 <button
                   onClick={() => window.print()}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                  className="flex-1 sm:flex-none px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer"
                 >
-                  <Printer size={15} /> Imprimir / Salvar em PDF
+                  <Printer size={16} /> Imprimir / Salvar em PDF
                 </button>
                 <button
                   onClick={() => setExibirRelatorioImpressao(false)}
-                  className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+                  className="px-3 py-2.5 text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1"
                 >
-                  <X size={18} />
+                  <X size={16} /> Fechar
                 </button>
               </div>
             </div>
 
-            {/* CONTEÚDO FORMATADO DO RELATÓRIO */}
-            <div className="space-y-6 text-slate-900">
-              {/* Cabeçalho Corporativo */}
-              <div className="border-b-2 border-slate-800 pb-4 flex justify-between items-end print:break-inside-avoid">
-                <div>
-                  <h2 className="text-xl font-black uppercase tracking-tight text-slate-900">
-                    CONTROLE DE PEDIDOS & SUPRIMENTOS
-                  </h2>
-                  <p className="text-sm font-semibold text-slate-600">
-                    Relatório de Acompanhamento de Pedidos e Prazos de Entrega
-                  </p>
+            {/* Dica de configuração para o usuário */}
+            <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl text-xs text-blue-900 flex items-start gap-2">
+              <Info size={16} className="text-blue-600 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold">Dica para exportação perfeita em PDF:</span>
+                <span className="text-blue-800 ml-1">
+                  Na janela do navegador que se abrirá ao clicar em &ldquo;Imprimir / Salvar em PDF&rdquo;, escolha o destino <strong>&ldquo;Salvar como PDF&rdquo;</strong>, formato <strong>A4</strong> e certifique-se de marcar a opção <strong>&ldquo;Gráficos de segundo plano&rdquo;</strong> para manter as cores dos indicadores e gráficos.
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* DOCUMENTO OFICIAL FORMATADO PARA A4 CONTÍNUO */}
+          <div className="space-y-6 text-slate-900 print:space-y-5 print:text-[10pt]">
+            {/* 1. CABEÇALHO CORPORATIVO */}
+            <div className="border-b-2 border-slate-900 pb-3 flex justify-between items-end print:break-inside-avoid">
+              <div>
+                <div className="text-[10px] uppercase font-bold tracking-widest text-blue-700">
+                  Sistema de Gestão Operacional
                 </div>
-                <div className="text-right text-xs text-slate-500">
-                  <div>Data de emissão: {new Date().toLocaleDateString('pt-BR')} {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>
-                  <div>Base de dados: Registros Oficiais do Sistema</div>
+                <h1 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-slate-900">
+                  CONTROLE DE PEDIDOS &amp; SUPRIMENTOS
+                </h1>
+                <h2 className="text-sm font-bold text-slate-700">
+                  Relatório de Acompanhamento de Pedidos e Prazos de Entrega
+                </h2>
+              </div>
+              <div className="text-right text-xs text-slate-600 space-y-0.5">
+                <div>
+                  <span className="font-semibold text-slate-700">Emissão:</span>{' '}
+                  {new Date().toLocaleDateString('pt-BR')} às{' '}
+                  {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                </div>
+                <div>
+                  <span className="font-semibold text-slate-700">Emitido por:</span>{' '}
+                  {currentUser?.nome || 'Usuário do Sistema'}
+                </div>
+                <div className="text-[10px] text-slate-500">
+                  Base de dados: Registros Oficiais (Google Sheets)
                 </div>
               </div>
+            </div>
 
-              {/* Resumo do Período e Parâmetros */}
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs print:break-inside-avoid">
-                <div>
-                  <span className="text-slate-500 block font-medium">Período Selecionado:</span>
-                  <span className="font-bold text-slate-800">
-                    {dataInicioFiltro ? formatarDataBr(dataInicioFiltro) : 'Início'} até{' '}
-                    {dataFimFiltro ? formatarDataBr(dataFimFiltro) : 'Hoje'}
-                  </span>
+            {/* 2. RESUMO DO ESCOPO E FILTROS APLICADOS */}
+            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-300 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs print:break-inside-avoid print:bg-slate-50/80">
+              <div>
+                <span className="text-slate-500 block font-medium text-[11px]">Período Analisado:</span>
+                <span className="font-bold text-slate-900">
+                  {dataInicioFiltro ? formatarDataBr(dataInicioFiltro) : 'Início do histórico'} até{' '}
+                  {dataFimFiltro ? formatarDataBr(dataFimFiltro) : 'Hoje'}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-500 block font-medium text-[11px]">Situação dos Pedidos:</span>
+                <span className="font-bold text-slate-900">
+                  {situacaoFiltro === 'TODOS'
+                    ? 'Todas as situações'
+                    : situacaoFiltro === 'ENTREGUE'
+                    ? 'Pedidos entregues'
+                    : situacaoFiltro === 'PENDENTE'
+                    ? 'Pedidos aguardando entrega'
+                    : 'Cancelados'}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-500 block font-medium text-[11px]">Solicitante:</span>
+                <span className="font-bold text-slate-900">{solicitanteFiltro || 'Todos os solicitantes'}</span>
+              </div>
+              <div>
+                <span className="text-slate-500 block font-medium text-[11px]">Total no Período:</span>
+                <span className="font-black text-blue-700 text-sm">{dadosFiltrados.length} solicitações</span>
+              </div>
+            </div>
+
+            {/* 3. QUADRO DE INDICADORES PRINCIPAIS */}
+            <div className="print:break-inside-avoid">
+              <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 mb-2 border-b border-slate-200 pb-1">
+                1. Indicadores Principais de Atendimento
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div className="p-2.5 border border-slate-300 rounded-lg bg-white">
+                  <div className="text-[10px] text-slate-500 font-medium">Total de pedidos</div>
+                  <div className="text-xl font-black text-slate-900">{indicadores.totalPedidos}</div>
+                  <div className="text-[9px] text-slate-400 mt-0.5">Período selecionado</div>
                 </div>
-                <div>
-                  <span className="text-slate-500 block font-medium">Situação dos Pedidos:</span>
-                  <span className="font-bold text-slate-800">
-                    {situacaoFiltro === 'TODOS'
-                      ? 'Todas as situações'
-                      : situacaoFiltro === 'ENTREGUE'
-                      ? 'Pedidos entregues'
-                      : situacaoFiltro === 'PENDENTE'
-                      ? 'Pedidos aguardando entrega'
-                      : 'Cancelados'}
-                  </span>
+                <div className="p-2.5 border border-slate-300 rounded-lg bg-white">
+                  <div className="text-[10px] text-slate-500 font-medium">Pedidos entregues</div>
+                  <div className="text-xl font-black text-emerald-700">
+                    {indicadores.pedidosEntregues} ({indicadores.pedidosEntreguesPct.toFixed(1)}%)
+                  </div>
+                  <div className="text-[9px] text-emerald-700 mt-0.5">Pedidos com entrega registrada</div>
                 </div>
-                <div>
-                  <span className="text-slate-500 block font-medium">Solicitante:</span>
-                  <span className="font-bold text-slate-800">{solicitanteFiltro || 'Todos os solicitantes'}</span>
+                <div className="p-2.5 border border-slate-300 rounded-lg bg-white">
+                  <div className="text-[10px] text-slate-500 font-medium">Pedidos pendentes</div>
+                  <div className="text-xl font-black text-amber-700">
+                    {indicadores.pedidosPendentes} ({indicadores.pedidosPendentesPct.toFixed(1)}%)
+                  </div>
+                  <div className="text-[9px] text-amber-700 mt-0.5">Aguardando entrega</div>
                 </div>
-                <div>
-                  <span className="text-slate-500 block font-medium">Total de Registros:</span>
-                  <span className="font-bold text-slate-800">{dadosFiltrados.length} pedidos</span>
+                <div className="p-2.5 border border-slate-300 rounded-lg bg-white">
+                  <div className="text-[10px] text-slate-500 font-medium">Tempo médio para entrega</div>
+                  <div className="text-xl font-black text-blue-700">
+                    {entreguesValidos.length > 0 ? `${indicadores.tempoMedioEntregaDias.toFixed(1)} dias` : '-'}
+                  </div>
+                  <div className="text-[9px] text-slate-500 mt-0.5">Média dos pedidos entregues</div>
+                </div>
+                <div className="p-2.5 border border-slate-300 rounded-lg bg-white">
+                  <div className="text-[10px] text-slate-500 font-medium">Tempo mediano para entrega</div>
+                  <div className="text-xl font-black text-slate-800">
+                    {entreguesValidos.length > 0 ? `${indicadores.tempoMedianoEntregaDias.toFixed(1)} dias` : '-'}
+                  </div>
+                  <div className="text-[9px] text-slate-500 mt-0.5">50% entregues em até esse prazo</div>
+                </div>
+                <div className="p-2.5 border border-slate-300 rounded-lg bg-white">
+                  <div className="text-[10px] text-slate-500 font-medium">Pedido há mais tempo aguardando</div>
+                  <div className="text-xl font-black text-rose-700">
+                    {indicadores.maiorEsperaAbertaDias > 0 ? `${indicadores.maiorEsperaAbertaDias} dias` : '-'}
+                  </div>
+                  <div className="text-[9px] text-rose-600 mt-0.5">Maior tempo transcorrido</div>
+                </div>
+                <div className="p-2.5 border border-slate-300 rounded-lg bg-white col-span-2">
+                  <div className="text-[10px] text-slate-500 font-medium">Tempo médio de espera dos pedidos pendentes</div>
+                  <div className="text-xl font-black text-slate-900">
+                    {pendentesValidos.length > 0 ? `${indicadores.tempoAtualEsperaMedioDias.toFixed(1)} dias corridos` : '0 dias'}
+                  </div>
+                  <div className="text-[9px] text-slate-500 mt-0.5">Média dos pedidos que continuam aguardando</div>
                 </div>
               </div>
+            </div>
 
-              {/* Quadro de Indicadores Principais */}
+            {/* 4. QUADRO DE ENTREGAS POR TEMPO DE ATENDIMENTO */}
+            <div className="print:break-inside-avoid">
+              <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 mb-2 border-b border-slate-200 pb-1">
+                2. Entregas por tempo de atendimento (pedidos com entrega registrada)
+              </h3>
+              <table className="w-full text-xs text-left border border-slate-300">
+                <thead className="bg-slate-100 text-slate-800 font-bold uppercase text-[10px] border-b border-slate-300">
+                  <tr>
+                    <th className="p-2 border-r border-slate-300">Faixa de Tempo</th>
+                    <th className="p-2 border-r border-slate-300">Descrição</th>
+                    <th className="p-2 border-r border-slate-300 text-center w-24">Quantidade</th>
+                    <th className="p-2 border-r border-slate-300 text-right w-24">Percentual</th>
+                    <th className="p-2 w-48">Proporção Visual</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {faixasPrazo.map((f) => (
+                    <tr key={f.id} className="print:break-inside-avoid even:bg-slate-50/50">
+                      <td className="p-2 font-bold text-slate-900 border-r border-slate-200">{f.label}</td>
+                      <td className="p-2 text-slate-700 border-r border-slate-200">{f.descricao}</td>
+                      <td className="p-2 text-center font-bold text-slate-900 border-r border-slate-200 font-mono">
+                        {f.quantidade}
+                      </td>
+                      <td className="p-2 text-right font-mono font-bold text-slate-800 border-r border-slate-200">
+                        {f.percentual.toFixed(1)}%
+                      </td>
+                      <td className="p-2">
+                        <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden border border-slate-200">
+                          <div className={`h-full ${f.cor}`} style={{ width: `${Math.max(f.percentual, 3)}%` }}></div>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="text-[10px] text-slate-500 mt-1 flex justify-between">
+                <span>Total avaliado: {entreguesValidos.length} pedidos com data de entrega registrada</span>
+                <span>Distribuição calculada em dias corridos entre solicitação e entrega</span>
+              </div>
+            </div>
+
+            {/* 5. EVOLUÇÃO MENSAL DO ATENDIMENTO */}
+            {evolucaoMensal.length > 0 && (
               <div className="print:break-inside-avoid">
-                <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 mb-2">
-                  1. Indicadores Principais de Atendimento
-                </h4>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="p-3 border border-slate-200 rounded-lg bg-white">
-                    <div className="text-[11px] text-slate-500">Total de pedidos</div>
-                    <div className="text-xl font-bold text-slate-900">{indicadores.totalPedidos}</div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">Período selecionado</div>
-                  </div>
-                  <div className="p-3 border border-slate-200 rounded-lg bg-white">
-                    <div className="text-[11px] text-slate-500">Pedidos entregues</div>
-                    <div className="text-xl font-bold text-emerald-700">
-                      {indicadores.pedidosEntregues} ({indicadores.pedidosEntreguesPct.toFixed(1)}%)
-                    </div>
-                    <div className="text-[10px] text-emerald-600 mt-0.5">Pedidos com entrega registrada</div>
-                  </div>
-                  <div className="p-3 border border-slate-200 rounded-lg bg-white">
-                    <div className="text-[11px] text-slate-500">Pedidos pendentes</div>
-                    <div className="text-xl font-bold text-amber-700">
-                      {indicadores.pedidosPendentes} ({indicadores.pedidosPendentesPct.toFixed(1)}%)
-                    </div>
-                    <div className="text-[10px] text-amber-600 mt-0.5">Aguardando entrega</div>
-                  </div>
-                  <div className="p-3 border border-slate-200 rounded-lg bg-white">
-                    <div className="text-[11px] text-slate-500">Tempo médio para entrega</div>
-                    <div className="text-xl font-bold text-blue-700">
-                      {entreguesValidos.length > 0 ? `${indicadores.tempoMedioEntregaDias.toFixed(1)} dias` : '-'}
-                    </div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">Média dos pedidos entregues</div>
-                  </div>
-                  <div className="p-3 border border-slate-200 rounded-lg bg-white">
-                    <div className="text-[11px] text-slate-500">Tempo mediano para entrega</div>
-                    <div className="text-xl font-bold text-slate-800">
-                      {entreguesValidos.length > 0 ? `${indicadores.tempoMedianoEntregaDias.toFixed(1)} dias` : '-'}
-                    </div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">Mediana estatística</div>
-                  </div>
-                  <div className="p-3 border border-slate-200 rounded-lg bg-white">
-                    <div className="text-[11px] text-slate-500">Pedido há mais tempo aguardando</div>
-                    <div className="text-xl font-bold text-rose-700">
-                      {indicadores.maiorEsperaAbertaDias > 0 ? `${indicadores.maiorEsperaAbertaDias} dias` : '-'}
-                    </div>
-                    <div className="text-[10px] text-rose-600 mt-0.5">Maior tempo transcorrido</div>
-                  </div>
-                  <div className="p-3 border border-slate-200 rounded-lg bg-white col-span-2">
-                    <div className="text-[11px] text-slate-500">Tempo médio de espera dos pedidos pendentes</div>
-                    <div className="text-xl font-bold text-slate-900">
-                      {pendentesValidos.length > 0 ? `${indicadores.tempoAtualEsperaMedioDias.toFixed(1)} dias corridos` : '0 dias'}
-                    </div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">Média dos pedidos que continuam aguardando</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Quadro de Distribuição por Faixas */}
-              <div className="print:break-inside-avoid">
-                <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 mb-2">
-                  2. Entregas por tempo de atendimento (pedidos com entrega registrada)
-                </h4>
-                <table className="w-full text-xs text-left border border-slate-200">
-                  <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px]">
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 mb-2 border-b border-slate-200 pb-1">
+                  3. Evolução do tempo de entrega ao longo dos meses
+                </h3>
+                <table className="w-full text-xs text-left border border-slate-300">
+                  <thead className="bg-slate-100 text-slate-800 font-bold uppercase text-[10px] border-b border-slate-300">
                     <tr>
-                      <th className="p-2 border-b">Faixa de Tempo</th>
-                      <th className="p-2 border-b">Descrição</th>
-                      <th className="p-2 border-b text-center">Quantidade</th>
-                      <th className="p-2 border-b text-right">Percentual</th>
+                      <th className="p-2 border-r border-slate-300">Mês/Ano</th>
+                      <th className="p-2 border-r border-slate-300 text-center w-36">Pedidos Solicitados</th>
+                      <th className="p-2 border-r border-slate-300 text-center w-36">Pedidos Entregues</th>
+                      <th className="p-2 border-r border-slate-300 text-right w-36">Tempo Médio para Entrega</th>
+                      <th className="p-2 text-right w-36">Tempo Mediano para Entrega</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
-                    {faixasPrazo.map((f) => (
-                      <tr key={f.id} className="print:break-inside-avoid">
-                        <td className="p-2 font-bold text-slate-900">{f.label}</td>
-                        <td className="p-2 text-slate-600">{f.descricao}</td>
-                        <td className="p-2 text-center font-bold">{f.quantidade}</td>
-                        <td className="p-2 text-right font-mono">{f.percentual.toFixed(1)}%</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Listagem dos Pedidos Selecionados */}
-              <div className="print:break-inside-avoid">
-                <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 mb-2">
-                  3. Relação de Pedidos do Período ({dadosFiltrados.length} pedidos)
-                </h4>
-                <table className="w-full text-[11px] text-left border border-slate-200">
-                  <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[9px]">
-                    <tr>
-                      <th className="p-2 border-b">Protocolo</th>
-                      <th className="p-2 border-b">Solicitante</th>
-                      <th className="p-2 border-b">Material</th>
-                      <th className="p-2 border-b text-center">Qtd</th>
-                      <th className="p-2 border-b">Data da Solicitação</th>
-                      <th className="p-2 border-b">Data da Entrega</th>
-                      <th className="p-2 border-b">Situação</th>
-                      <th className="p-2 border-b text-right">Dias Corridos</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {dadosFiltrados.slice(0, 50).map((p) => (
-                      <tr key={p.protocolo} className="print:break-inside-avoid">
-                        <td className="p-1.5 font-mono font-bold text-slate-900">{p.protocolo}</td>
-                        <td className="p-1.5 text-slate-800">{p.solicitante}</td>
-                        <td className="p-1.5 font-semibold text-slate-900 truncate max-w-xs">{p.material}</td>
-                        <td className="p-1.5 text-center font-mono">{p.quantidade ?? 1}</td>
-                        <td className="p-1.5 text-slate-600">{formatarDataBr(p.dataPedido)}</td>
-                        <td className="p-1.5 text-slate-600">{formatarDataBr(p.dataEntrega)}</td>
-                        <td className="p-1.5">{p.situacao || '-'}</td>
-                        <td className="p-1.5 text-right font-mono font-bold">
-                          {p.diasCalculados !== null ? `${p.diasCalculados} d` : '-'}
+                    {evolucaoMensal.map((m) => (
+                      <tr key={m.mesAnoKey} className="print:break-inside-avoid even:bg-slate-50/50">
+                        <td className="p-2 font-bold text-slate-900 border-r border-slate-200">{m.mesAnoFormatado}</td>
+                        <td className="p-2 text-center font-bold text-blue-700 border-r border-slate-200 font-mono">
+                          {m.novosPedidosAbertos}
+                        </td>
+                        <td className="p-2 text-center font-bold text-emerald-700 border-r border-slate-200 font-mono">
+                          {m.pedidosConcluidos}
+                        </td>
+                        <td className="p-2 text-right font-mono font-bold text-slate-900 border-r border-slate-200">
+                          {m.pedidosConcluidos > 0 ? `${m.tempoMedioDias.toFixed(1)} dias` : '-'}
+                        </td>
+                        <td className="p-2 text-right font-mono text-slate-700">
+                          {m.pedidosConcluidos > 0 ? `${m.tempoMedianoDias.toFixed(1)} dias` : '-'}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                {dadosFiltrados.length > 50 && (
-                  <p className="text-[10px] text-slate-500 mt-2 italic">
-                    * Exibindo os primeiros 50 registros para síntese executiva. Para a relação completa, utilize a exportação em CSV.
+              </div>
+            )}
+
+            {/* 6. PEDIDOS QUE CONTINUAM AGUARDANDO ENTREGA (PENDÊNCIAS) */}
+            {pendentesValidos.length > 0 && (
+              <div className="print:break-inside-avoid">
+                <div className="flex justify-between items-baseline mb-1 border-b border-slate-200 pb-1">
+                  <h3 className="text-xs font-black uppercase tracking-wider text-amber-900">
+                    4. Pedidos que Continuam Aguardando Entrega ({pendentesValidos.length} solicitações)
+                  </h3>
+                  <span className="text-[10px] text-slate-500">Ordenados pelo tempo transcorrido</span>
+                </div>
+                <table className="w-full text-[10px] text-left border border-amber-300">
+                  <thead className="bg-amber-100 text-amber-950 font-bold uppercase text-[9px] border-b border-amber-300">
+                    <tr>
+                      <th className="p-1.5 border-r border-amber-200 w-24">Protocolo</th>
+                      <th className="p-1.5 border-r border-amber-200 w-32">Solicitante</th>
+                      <th className="p-1.5 border-r border-amber-200">Material / Item</th>
+                      <th className="p-1.5 border-r border-amber-200 w-28">Resp. Compra</th>
+                      <th className="p-1.5 border-r border-amber-200 w-28">Status Compra</th>
+                      <th className="p-1.5 border-r border-amber-200 w-20 text-center">Data Pedido</th>
+                      <th className="p-1.5 text-right w-24">Dias em Espera</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-amber-200">
+                    {pendentesOrdenadosEspera.slice(0, 20).map((p) => (
+                      <tr key={p.protocolo} className="print:break-inside-avoid even:bg-amber-50/60">
+                        <td className="p-1.5 font-mono font-bold text-slate-900 border-r border-amber-200">
+                          {p.protocolo}
+                        </td>
+                        <td className="p-1.5 text-slate-800 border-r border-amber-200">{p.solicitante}</td>
+                        <td className="p-1.5 font-medium text-slate-900 border-r border-amber-200 break-words">
+                          {p.material}
+                        </td>
+                        <td className="p-1.5 text-slate-700 border-r border-amber-200">
+                          {p.responsavelCompra || 'Não definido'}
+                        </td>
+                        <td className="p-1.5 text-slate-700 border-r border-amber-200">
+                          {p.statusCompra || 'Aguardando entrega'}
+                        </td>
+                        <td className="p-1.5 text-center text-slate-700 border-r border-amber-200">
+                          {formatarDataBr(p.dataPedido)}
+                        </td>
+                        <td className="p-1.5 text-right font-mono font-bold text-amber-900">
+                          {p.diasCalculados} {p.diasCalculados === 1 ? 'dia' : 'dias'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {pendentesOrdenadosEspera.length > 20 && (
+                  <p className="text-[9px] text-slate-500 mt-1 italic">
+                    * Exibindo os 20 pedidos com maior tempo de espera. Para a relação completa de todas as pendências, verifique a Seção 5 abaixo.
                   </p>
                 )}
               </div>
+            )}
 
-              {/* Rodapé de Assinatura */}
-              <div className="pt-8 border-t border-slate-300 flex justify-between items-end text-xs text-slate-500 print:break-inside-avoid">
-                <div>
-                  <div className="border-t border-slate-400 w-48 mb-1"></div>
-                  <div>Responsável pelo Controle</div>
-                </div>
-                <div className="text-right">
-                  <div>Documento gerado automaticamente pelo Sistema de Gestão</div>
-                </div>
+            {/* 7. RELAÇÃO INTEGRAL DE PEDIDOS DO PERÍODO (TODOS OS PEDIDOS SEM TRUNCAMENTO) */}
+            <div className="mt-4">
+              <div className="flex justify-between items-baseline mb-1 border-b border-slate-200 pb-1">
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">
+                  5. Relação Integral de Pedidos do Período ({dadosFiltrados.length} solicitações listadas)
+                </h3>
+                <span className="text-[10px] text-slate-500">
+                  Listagem completa sem cortes ou omissões
+                </span>
+              </div>
+              <table className="w-full text-[9.5px] text-left border border-slate-300">
+                <thead className="bg-slate-100 text-slate-900 font-bold uppercase text-[8.5px] border-b border-slate-300">
+                  <tr>
+                    <th className="p-1.5 border-r border-slate-300 w-20">Protocolo</th>
+                    <th className="p-1.5 border-r border-slate-300 w-28">Solicitante</th>
+                    <th className="p-1.5 border-r border-slate-300">Material / Equipamento</th>
+                    <th className="p-1.5 border-r border-slate-300 text-center w-10">Qtd</th>
+                    <th className="p-1.5 border-r border-slate-300 w-20 text-center">Data Pedido</th>
+                    <th className="p-1.5 border-r border-slate-300 w-20 text-center">Data Entrega</th>
+                    <th className="p-1.5 border-r border-slate-300 w-24">Situação</th>
+                    <th className="p-1.5 text-right w-20">Dias Corridos</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {dadosFiltrados.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="py-6 text-center text-slate-500 italic">
+                        Nenhum pedido encontrado no período ou com os filtros selecionados.
+                      </td>
+                    </tr>
+                  ) : (
+                    dadosFiltrados.map((p, idx) => (
+                      <tr key={p.protocolo || idx} className="print:break-inside-avoid even:bg-slate-50/60">
+                        <td className="p-1.5 font-mono font-bold text-slate-900 border-r border-slate-200 whitespace-nowrap">
+                          {p.protocolo}
+                        </td>
+                        <td className="p-1.5 text-slate-800 border-r border-slate-200">{p.solicitante}</td>
+                        <td className="p-1.5 font-medium text-slate-900 border-r border-slate-200 break-words">
+                          {p.material}
+                        </td>
+                        <td className="p-1.5 text-center font-mono border-r border-slate-200">
+                          {p.quantidade ?? 1}
+                        </td>
+                        <td className="p-1.5 text-center text-slate-700 border-r border-slate-200 whitespace-nowrap">
+                          {formatarDataBr(p.dataPedido)}
+                        </td>
+                        <td className="p-1.5 text-center text-slate-700 border-r border-slate-200 whitespace-nowrap">
+                          {formatarDataBr(p.dataEntrega)}
+                        </td>
+                        <td className="p-1.5 border-r border-slate-200 text-slate-800">
+                          {p.situacao || p.statusCompra || '-'}
+                        </td>
+                        <td className="p-1.5 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
+                          {p.diasCalculados !== null ? `${p.diasCalculados} d` : '-'}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+              <div className="text-[10px] text-slate-500 mt-1 flex justify-between">
+                <span>Total listado: {dadosFiltrados.length} pedidos</span>
+                <span>Documento oficial para auditoria de atendimento e prazos</span>
+              </div>
+            </div>
+
+            {/* 8. RODAPÉ DE ASSINATURA E AUTENTICIDADE */}
+            <div className="pt-8 border-t-2 border-slate-800 grid grid-cols-2 gap-8 text-xs text-slate-700 print:break-inside-avoid">
+              <div>
+                <div className="border-t border-slate-400 w-56 mb-1 pt-1"></div>
+                <div className="font-bold text-slate-900">Responsável pelo Controle de Pedidos</div>
+                <div className="text-[10px] text-slate-500">Gestão de Suprimentos &amp; Almoxarifado</div>
+              </div>
+              <div className="text-right flex flex-col items-end">
+                <div className="border-t border-slate-400 w-56 mb-1 pt-1"></div>
+                <div className="font-bold text-slate-900">Diretoria / Gestão Operacional</div>
+                <div className="text-[10px] text-slate-500">Homologação e Acompanhamento Gerencial</div>
+              </div>
+              <div className="col-span-2 pt-2 text-[10px] text-slate-500 text-center border-t border-slate-200 mt-2">
+                Documento gerado eletronicamente pelo Sistema de Controle de Pedidos &amp; Suprimentos em {new Date().toLocaleDateString('pt-BR')} às {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}. Dados autênticos sincronizados da base oficial.
               </div>
             </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

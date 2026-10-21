@@ -1,1 +1,127 @@
 @import "tailwindcss";
+
+/* ==========================================================================
+   CONFIGURAÇÃO ESPECIAL PARA IMPRESSÃO E EXPORTAÇÃO EM PDF (A4)
+   Garante documento contínuo, sem cortes, sem barras de rolagem e sem ocultação
+   de dados ou quebra de linhas ao meio.
+   ========================================================================== */
+
+@page {
+  size: A4 portrait;
+  margin: 10mm 10mm 12mm 10mm;
+}
+
+@media print {
+  /* Força navegadores a imprimirem backgrounds, bordas e cores de indicadores */
+  *,
+  *::before,
+  *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  html,
+  body {
+    background-color: #ffffff !important;
+    background-image: none !important;
+    color: #0f172a !important;
+    font-size: 10pt !important;
+    line-height: 1.35 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  #root {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: block !important;
+    position: static !important;
+  }
+
+  /* Reset irrestrito de containers na impressão */
+  .min-h-screen,
+  main,
+  section,
+  article,
+  div {
+    max-height: none !important;
+  }
+
+  /* Elementos expressamente proibidos na impressão */
+  nav,
+  header,
+  aside,
+  button,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Tabela formatada para A4 contínuo sem cortes */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+
+  /* Repete o cabeçalho da tabela em todas as páginas do PDF */
+  thead {
+    display: table-header-group !important;
+  }
+
+  tbody {
+    display: table-row-group !important;
+  }
+
+  /* Evita que uma linha seja partida no meio por uma dobra de página */
+  tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  th,
+  td {
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+
+  /* Blocos que devem permanecer íntegros sem quebra interna */
+  .print-avoid-break,
+  .print\:break-inside-avoid {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Container do Relatório na impressão */
+  .print-report-container {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    border: none !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  /* Remove marcadores de links */
+  a[href]::after {
+    content: "" !important;
+  }
+}
