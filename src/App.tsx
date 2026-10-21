@@ -16,6 +16,7 @@ import Login from './pages/Login';
 import PrimeiroAcesso from './pages/PrimeiroAcesso';
 import RecuperarSenha from './pages/RecuperarSenha';
 import RedefinirSenha from './pages/RedefinirSenha';
+import PainelAnalitico from './pages/PainelAnalitico';
 
 function AppContent() {
   const { currentUser, isAdmin, isFirstAccess, setIsFirstAccess } = useAuth();
@@ -49,6 +50,7 @@ function AppContent() {
     <AppLayout>
       <Routes>
         <Route path="/" element={<Dashboard />} />
+        <Route path="/analitico" element={<PainelAnalitico />} />
         <Route path="/solicitacoes" element={<Solicitacoes />} />
         <Route path="/nova" element={<NovaSolicitacao />} />
         <Route path="/itens" element={<Itens />} />

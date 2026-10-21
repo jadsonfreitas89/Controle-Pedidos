@@ -1,10 +1,11 @@
 import { ReactNode } from 'react';
-import { LayoutDashboard, ListTodo, Wrench, Users, MessageSquare, User as UserIcon, LogOut } from 'lucide-react';
+import { LayoutDashboard, BarChart3, ListTodo, Wrench, Users, MessageSquare, User as UserIcon, LogOut } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard, adminOnly: false },
+  { path: '/analitico', label: 'Painel Analítico', icon: BarChart3, adminOnly: false },
   { path: '/solicitacoes', label: 'Solicitações', icon: ListTodo, adminOnly: false },
   { path: '/itens', label: 'Itens', icon: Wrench, adminOnly: false },
   { path: '/usuarios', label: 'Usuários', icon: Users, adminOnly: true },
