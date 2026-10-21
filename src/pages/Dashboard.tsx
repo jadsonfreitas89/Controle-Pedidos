@@ -178,7 +178,7 @@ export default function Dashboard() {
             className="bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 font-medium px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors min-h-[42px]"
           >
             <BarChart3 size={18} />
-            <span>Painel Analítico</span>
+            <span>Acompanhamento de Pedidos</span>
           </button>
 
           <button

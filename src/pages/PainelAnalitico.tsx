@@ -38,6 +38,7 @@ import {
   Inbox,
   Sparkles,
   ExternalLink,
+  Info,
 } from 'lucide-react';
 import Card from '../components/ui/Card';
 
@@ -228,7 +229,7 @@ export default function PainelAnalitico() {
     return Math.max(...entreguesValidos.map((p) => p.diasCalculados ?? 0), 10);
   }, [entreguesValidos]);
 
-  // Prepara dados do Gráfico 3 (Backlog de pendentes com tempo de espera)
+  // Prepara dados do Gráfico 3 (Pendentes com tempo de espera)
   const pendentesOrdenadosEspera = useMemo(() => {
     return [...pendentesValidos].sort((a, b) => (b.diasCalculados ?? 0) - (a.diasCalculados ?? 0));
   }, [pendentesValidos]);
@@ -298,20 +299,20 @@ export default function PainelAnalitico() {
 
     const cabecalhos = [
       'Protocolo',
-      'Data Solicitação',
+      'Data da Solicitação',
       'Solicitante',
       'E-mail',
       'Material',
       'Quantidade',
       'Prioridade',
       'Situação',
-      'Status Compra',
-      'Responsável Compra',
-      'Data Compra',
-      'Previsão Chegada',
-      'Data Entrega',
-      'Dias Atendimento / Espera',
-      'Tipo de Prazo',
+      'Status da Compra',
+      'Responsável pela Compra',
+      'Data da Compra',
+      'Previsão de Chegada',
+      'Data da Entrega',
+      'Tempo Transcorrido (Dias corridos)',
+      'Situação do Prazo',
       'Onde Usar',
       'Para Que',
     ];
@@ -332,10 +333,10 @@ export default function PainelAnalitico() {
       `"${formatarDataBr(item.dataEntrega)}"`,
       item.diasCalculados !== null ? item.diasCalculados : '',
       item.tempoTipo === 'ATENDIMENTO'
-        ? 'Concluído (Atendimento)'
+        ? 'Entregue (Tempo de atendimento)'
         : item.tempoTipo === 'ESPERA'
-        ? 'Em Aberto (Espera)'
-        : 'Cancelado/Inválido',
+        ? 'Aguardando entrega (Tempo de espera)'
+        : 'Cancelado ou Data Inválida',
       `"${String(item.onde || '').replace(/"/g, '""')}"`,
       `"${String(item.paraQue || '').replace(/"/g, '""')}"`,
     ]);
@@ -345,7 +346,7 @@ export default function PainelAnalitico() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `relatorio_analitico_pedidos_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `acompanhamento_pedidos_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -409,7 +410,7 @@ export default function PainelAnalitico() {
     }
     return (
       <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-100 text-amber-800 border border-amber-200">
-        {sol.statusCompra || 'Pendente'}
+        {sol.statusCompra || 'Aguardando entrega'}
       </span>
     );
   };
@@ -429,7 +430,7 @@ export default function PainelAnalitico() {
     return (
       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-mono font-semibold border ${cor}`}>
         <Clock size={12} />
-        {dias} {dias === 1 ? 'dia' : 'dias'}
+        {dias} {dias === 1 ? 'dia corrido' : 'dias corridos'}
       </span>
     );
   };
@@ -438,14 +439,14 @@ export default function PainelAnalitico() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-slate-600 gap-3">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
-        <p className="text-sm font-medium">Carregando dados analíticos da planilha...</p>
+        <p className="text-sm font-medium">Carregando dados dos pedidos...</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6 pb-12">
-      {/* CABEÇALHO DO PAINEL ANALÍTICO */}
+      {/* CABEÇALHO DO PAINEL DE ACOMPANHAMENTO DE PEDIDOS */}
       <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -453,11 +454,11 @@ export default function PainelAnalitico() {
               <TrendingUp size={22} />
             </span>
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-              Painel Analítico de Prazos e Entregas
+              Painel de Acompanhamento de Pedidos
             </h1>
           </div>
           <p className="text-slate-500 text-xs sm:text-sm">
-            Indicadores gerenciais de SLA, tempos médios, distribuição de lead-time e histórico operacional
+            Acompanhe os prazos de atendimento, as entregas realizadas e os pedidos que continuam aguardando
           </p>
         </div>
 
@@ -479,7 +480,7 @@ export default function PainelAnalitico() {
             title="Exportar dados filtrados para Excel/CSV"
           >
             <Download size={15} />
-            <span>Exportar CSV</span>
+            <span>Exportar planilha (CSV)</span>
           </button>
 
           <button
@@ -488,7 +489,7 @@ export default function PainelAnalitico() {
             title="Abrir relatório formatado para impressão ou salvar em PDF"
           >
             <Printer size={15} />
-            <span>Relatório Gerencial (PDF)</span>
+            <span>Relatório para Impressão (PDF)</span>
           </button>
         </div>
       </div>
@@ -498,21 +499,21 @@ export default function PainelAnalitico() {
         <div className="p-3.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl text-xs flex items-start gap-3">
           <AlertTriangle size={18} className="text-amber-600 shrink-0 mt-0.5" />
           <div className="space-y-0.5">
-            <span className="font-bold">Aviso de Auditoria de Dados:</span>
+            <span className="font-bold">Aviso sobre o registro de datas:</span>
             <p className="text-amber-800">
               {indicadores.pedidosComDataInvalida}{' '}
-              {indicadores.pedidosComDataInvalida === 1 ? 'registro possui' : 'registros possuem'} data de solicitação ou entrega ausente/incompleta na planilha e{' '}
-              {indicadores.pedidosComDataInvalida === 1 ? 'foi desconsiderado' : 'foram desconsiderados'} dos cálculos de prazo para garantir precisão matemática.
+              {indicadores.pedidosComDataInvalida === 1 ? 'pedido possui' : 'pedidos possuem'} data de solicitação ou de entrega não informada e{' '}
+              {indicadores.pedidosComDataInvalida === 1 ? 'não foi considerado' : 'não foram considerados'} no cálculo de médias de tempo para manter a exatidão dos indicadores.
             </p>
           </div>
         </div>
       )}
 
-      {/* FILTROS GLOBAIS */}
+      {/* FILTROS DE CONSULTA */}
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
-            <Filter size={15} className="text-blue-600" /> Filtros Operacionais
+            <Filter size={15} className="text-blue-600" /> Filtros de Consulta
           </span>
 
           <div className="flex items-center gap-1 text-xs">
@@ -521,13 +522,13 @@ export default function PainelAnalitico() {
               onClick={() => aplicarPresetData(30)}
               className="px-2.5 py-1 text-[11px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors"
             >
-              30 dias
+              Últimos 30 dias
             </button>
             <button
               onClick={() => aplicarPresetData(90)}
               className="px-2.5 py-1 text-[11px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors"
             >
-              90 dias
+              Últimos 90 dias
             </button>
             <button
               onClick={() => aplicarPresetData('ano')}
@@ -539,7 +540,7 @@ export default function PainelAnalitico() {
               onClick={() => aplicarPresetData('tudo')}
               className="px-2.5 py-1 text-[11px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors"
             >
-              Tudo
+              Todo o período
             </button>
           </div>
         </div>
@@ -547,7 +548,7 @@ export default function PainelAnalitico() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-1">
           {/* Data Início */}
           <div>
-            <label className="block text-[11px] font-semibold text-slate-600 mb-1">Data Inicial (Solicitação)</label>
+            <label className="block text-[11px] font-semibold text-slate-600 mb-1">Data inicial (solicitação)</label>
             <input
               type="date"
               value={dataInicioFiltro}
@@ -562,7 +563,7 @@ export default function PainelAnalitico() {
 
           {/* Data Fim */}
           <div>
-            <label className="block text-[11px] font-semibold text-slate-600 mb-1">Data Final (Solicitação)</label>
+            <label className="block text-[11px] font-semibold text-slate-600 mb-1">Data final (solicitação)</label>
             <input
               type="date"
               value={dataFimFiltro}
@@ -588,9 +589,9 @@ export default function PainelAnalitico() {
               className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium"
             >
               <option value="TODOS">Todas as situações</option>
-              <option value="ENTREGUE">Apenas Entregues</option>
-              <option value="PENDENTE">Apenas Pendentes (Em aberto)</option>
-              <option value="CANCELADO">Canceladas</option>
+              <option value="ENTREGUE">Pedidos entregues</option>
+              <option value="PENDENTE">Pedidos aguardando entrega</option>
+              <option value="CANCELADO">Pedidos cancelados</option>
             </select>
           </div>
 
@@ -638,7 +639,7 @@ export default function PainelAnalitico() {
         {temFiltroAtivo && (
           <div className="flex justify-between items-center pt-2 border-t border-slate-100 text-xs">
             <span className="text-slate-500">
-              Exibindo <span className="font-bold text-slate-900">{dadosFiltrados.length}</span> de {dadosBrutos.length} registros totais
+              Exibindo <span className="font-bold text-slate-900">{dadosFiltrados.length}</span> de {dadosBrutos.length} pedidos registrados
             </span>
             <button
               onClick={limparFiltros}
@@ -650,21 +651,29 @@ export default function PainelAnalitico() {
         )}
       </div>
 
-      {/* 4. CARDS DE INDICADORES PRINCIPAIS (KPIs) */}
+      {/* 4. CARDS DE INDICADORES PRINCIPAIS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* 4.1 Total de Pedidos */}
         <Card className="p-4 flex flex-col justify-between border-slate-200">
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Total de Pedidos</span>
+              <span className="text-xs font-bold text-slate-600 uppercase tracking-wide flex items-center gap-1.5">
+                Total de pedidos
+                <span title="Quantidade de solicitações registradas no período selecionado." className="text-slate-400 hover:text-blue-600 cursor-help">
+                  <Info size={13} />
+                </span>
+              </span>
               <span className="p-2 bg-slate-100 text-slate-700 rounded-xl">
                 <FileText size={18} />
               </span>
             </div>
             <div className="text-3xl font-extrabold text-slate-900">{indicadores.totalPedidos}</div>
+            <p className="text-[11px] text-slate-500 mt-1">
+              Quantidade de solicitações registradas no período selecionado.
+            </p>
           </div>
-          <div className="mt-3 pt-2 border-t border-slate-100 text-[11px] text-slate-500">
-            Período e filtros ativos
+          <div className="mt-3 pt-2 border-t border-slate-100 text-[11px] text-slate-500 font-medium">
+            Filtros ativos aplicados
           </div>
         </Card>
 
@@ -672,7 +681,12 @@ export default function PainelAnalitico() {
         <Card className="p-4 flex flex-col justify-between border-slate-200">
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Pedidos Entregues</span>
+              <span className="text-xs font-bold text-slate-600 uppercase tracking-wide flex items-center gap-1.5">
+                Pedidos entregues
+                <span title="Quantidade de pedidos que possuem registro de entrega concluída." className="text-slate-400 hover:text-emerald-600 cursor-help">
+                  <Info size={13} />
+                </span>
+              </span>
               <span className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
                 <CheckCircle2 size={18} />
               </span>
@@ -683,9 +697,12 @@ export default function PainelAnalitico() {
                 {indicadores.pedidosEntreguesPct.toFixed(1)}%
               </span>
             </div>
+            <p className="text-[11px] text-slate-500 mt-1">
+              Quantidade de pedidos que possuem registro de entrega concluída.
+            </p>
           </div>
-          <div className="mt-3 pt-2 border-t border-slate-100 text-[11px] text-slate-500">
-            Confirmação de entrega registrada
+          <div className="mt-3 pt-2 border-t border-slate-100 text-[11px] text-emerald-700 font-medium">
+            Pedidos com entrega registrada
           </div>
         </Card>
 
@@ -693,7 +710,12 @@ export default function PainelAnalitico() {
         <Card className="p-4 flex flex-col justify-between border-slate-200">
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Pedidos Pendentes</span>
+              <span className="text-xs font-bold text-slate-600 uppercase tracking-wide flex items-center gap-1.5">
+                Pedidos pendentes
+                <span title="Quantidade de pedidos que ainda não possuem registro de entrega concluída." className="text-slate-400 hover:text-amber-600 cursor-help">
+                  <Info size={13} />
+                </span>
+              </span>
               <span className="p-2 bg-amber-50 text-amber-600 rounded-xl">
                 <Inbox size={18} />
               </span>
@@ -704,9 +726,12 @@ export default function PainelAnalitico() {
                 {indicadores.pedidosPendentesPct.toFixed(1)}%
               </span>
             </div>
+            <p className="text-[11px] text-slate-500 mt-1">
+              Quantidade de pedidos que ainda não possuem registro de entrega concluída.
+            </p>
           </div>
-          <div className="mt-3 pt-2 border-t border-slate-100 text-[11px] text-slate-500">
-            Aguardando compra ou recebimento
+          <div className="mt-3 pt-2 border-t border-slate-100 text-[11px] text-amber-700 font-medium">
+            Aguardando entrega
           </div>
         </Card>
 
@@ -714,7 +739,15 @@ export default function PainelAnalitico() {
         <Card className="p-4 flex flex-col justify-between border-slate-200">
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Tempo Médio SLA</span>
+              <span className="text-xs font-bold text-slate-600 uppercase tracking-wide flex items-center gap-1.5">
+                Tempo médio para entrega
+                <span
+                  title="Quantidade média de dias entre a realização do pedido e a entrega, considerando os pedidos entregues com datas válidas."
+                  className="text-slate-400 hover:text-blue-600 cursor-help"
+                >
+                  <Info size={13} />
+                </span>
+              </span>
               <span className="p-2 bg-blue-50 text-blue-600 rounded-xl">
                 <Timer size={18} />
               </span>
@@ -722,31 +755,59 @@ export default function PainelAnalitico() {
             <div className="text-3xl font-extrabold text-blue-600">
               {entreguesValidos.length > 0 ? `${indicadores.tempoMedioEntregaDias.toFixed(1)} dias` : '-'}
             </div>
+            <p className="text-[11px] text-slate-500 mt-1">
+              Quantidade média de dias entre a realização do pedido e a entrega, considerando os pedidos entregues com datas válidas.
+            </p>
           </div>
-          <div className="mt-3 pt-2 border-t border-slate-100 flex justify-between items-center text-[11px] text-slate-500">
-            <span>Mediana estatística:</span>
-            <span className="font-bold text-slate-800">
-              {entreguesValidos.length > 0 ? `${indicadores.tempoMedianoEntregaDias.toFixed(1)} dias` : '-'}
+          <div className="mt-3 pt-2 border-t border-slate-100 text-[11px] text-slate-600 flex flex-col gap-0.5">
+            <div className="flex justify-between items-center">
+              <span className="font-semibold text-slate-700 flex items-center gap-1">
+                Tempo mediano para entrega:
+                <span
+                  title="Metade dos pedidos entregues foi atendida em até esse número de dias, e a outra metade em um tempo igual ou maior, considerando o cálculo estatístico adotado."
+                  className="text-slate-400 hover:text-blue-600 cursor-help"
+                >
+                  <Info size={11} />
+                </span>
+              </span>
+              <span className="font-bold text-slate-900 font-mono">
+                {entreguesValidos.length > 0 ? `${indicadores.tempoMedianoEntregaDias.toFixed(1)} dias` : '-'}
+              </span>
+            </div>
+            <span className="text-[10px] text-slate-400">
+              (50% das entregas feitas em até esse prazo)
             </span>
           </div>
         </Card>
       </div>
 
-      {/* LINHA DE INDICADORES DE BACKLOG / ESPERA */}
+      {/* LINHA DE INDICADORES DE PEDIDOS AGUARDANDO ENTREGA */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* 4.6 Maior Tempo de Espera em Aberto */}
-        <Card className="p-4 sm:p-5 border-slate-200 bg-gradient-to-br from-white to-rose-50/30">
+        {/* 4.6 Pedido há mais tempo aguardando */}
+        <Card className="p-4 sm:p-5 border-slate-200 bg-gradient-to-br from-white to-rose-50/20">
           <div className="flex items-start justify-between">
             <div className="space-y-1">
-              <div className="text-xs font-bold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
-                <AlertCircle size={15} className="text-rose-600" /> Maior Tempo de Espera (Backlog)
+              <div className="text-xs font-bold text-slate-600 uppercase tracking-wide flex items-center gap-1.5">
+                <Clock size={15} className="text-rose-600" />
+                <span>Pedido há mais tempo aguardando</span>
+                <span
+                  title="Mostra o pedido pendente com maior tempo transcorrido desde a solicitação."
+                  className="text-slate-400 hover:text-rose-600 cursor-help"
+                >
+                  <Info size={13} />
+                </span>
               </div>
               <div className="text-2xl sm:text-3xl font-black text-rose-700">
-                {indicadores.maiorEsperaAbertaDias > 0 ? `${indicadores.maiorEsperaAbertaDias} dias aguardando` : 'Nenhum pendente'}
+                {indicadores.maiorEsperaAbertaDias > 0
+                  ? `${indicadores.maiorEsperaAbertaDias} dias aguardando`
+                  : 'Nenhum pedido aguardando'}
               </div>
+              <p className="text-xs text-slate-500">
+                Mostra o pedido pendente com maior tempo transcorrido desde a solicitação.
+              </p>
             </div>
-            <span className="px-2.5 py-1 bg-rose-100 text-rose-800 font-bold text-xs rounded">
-              Pendente Crítico
+            <span className="px-2.5 py-1 bg-rose-100 text-rose-800 font-bold text-xs rounded shrink-0">
+              Maior tempo de espera
             </span>
           </div>
 
@@ -757,7 +818,7 @@ export default function PainelAnalitico() {
                   {indicadores.maiorEsperaPedido.material}
                 </div>
                 <div className="text-[11px] text-slate-500">
-                  Solicitante: <span className="font-medium text-slate-700">{indicadores.maiorEsperaPedido.solicitante}</span> • Aberto em:{' '}
+                  Solicitante: <span className="font-medium text-slate-700">{indicadores.maiorEsperaPedido.solicitante}</span> • Data do pedido:{' '}
                   {formatarDataBr(indicadores.maiorEsperaPedido.dataPedido)}
                 </div>
               </div>
@@ -774,41 +835,51 @@ export default function PainelAnalitico() {
           )}
         </Card>
 
-        {/* 4.7 Tempo Atual de Espera Médio dos Pendentes */}
-        <Card className="p-4 sm:p-5 border-slate-200 bg-gradient-to-br from-white to-amber-50/30">
+        {/* 4.7 Tempo médio de espera dos pedidos pendentes */}
+        <Card className="p-4 sm:p-5 border-slate-200 bg-gradient-to-br from-white to-amber-50/20">
           <div className="flex items-start justify-between">
             <div className="space-y-1">
-              <div className="text-xs font-bold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
-                <Clock size={15} className="text-amber-600" /> Média de Espera dos Pendentes
+              <div className="text-xs font-bold text-slate-600 uppercase tracking-wide flex items-center gap-1.5">
+                <Clock size={15} className="text-amber-600" />
+                <span>Tempo médio de espera dos pedidos pendentes</span>
+                <span
+                  title="Média de dias que os pedidos ainda não entregues estão aguardando, contados desde a data da solicitação até a data atual."
+                  className="text-slate-400 hover:text-amber-600 cursor-help"
+                >
+                  <Info size={13} />
+                </span>
               </div>
               <div className="text-2xl sm:text-3xl font-black text-amber-700">
                 {pendentesValidos.length > 0 ? `${indicadores.tempoAtualEsperaMedioDias.toFixed(1)} dias em média` : '0 dias'}
               </div>
+              <p className="text-xs text-slate-500">
+                Média de dias que os pedidos ainda não entregues estão aguardando, contados desde a data da solicitação até a data atual.
+              </p>
             </div>
-            <span className="px-2.5 py-1 bg-amber-100 text-amber-800 font-bold text-xs rounded">
-              {pendentesValidos.length} {pendentesValidos.length === 1 ? 'pedido em aberto' : 'pedidos em aberto'}
+            <span className="px-2.5 py-1 bg-amber-100 text-amber-800 font-bold text-xs rounded shrink-0">
+              {pendentesValidos.length} {pendentesValidos.length === 1 ? 'pedido aguardando' : 'pedidos aguardando'}
             </span>
           </div>
 
           <p className="mt-3 text-xs text-slate-600">
-            Representa a idade média do backlog ativo. Quanto menor esse número, mais ágil é o fluxo de resposta da equipe de compras e logística.
+            Média de dias corridos dos pedidos que continuam aguardando atendimento. Quanto menor esse número, mais ágil é o atendimento da equipe.
           </p>
         </Card>
       </div>
 
       {/* SEÇÃO DE GRÁFICOS: 1 E 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* GRÁFICO 1: TEMPO DE ENTREGA POR PEDIDO (LEAD TIME INDIVIDUAL) */}
+        {/* GRÁFICO 1: QUANTOS DIAS CADA PEDIDO LEVOU PARA SER ENTREGUE */}
         <Card className="p-4 sm:p-6 border-slate-200 flex flex-col justify-between">
           <div>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
               <div>
                 <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                   <BarChart3 size={18} className="text-blue-600" />
-                  Lead Time Individual por Pedido Entregue
+                  Quantos dias cada pedido levou para ser entregue
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Duração em dias corridos de cada solicitação atendida
+                  Duração em dias corridos de cada solicitação com entrega confirmada
                 </p>
               </div>
 
@@ -854,7 +925,7 @@ export default function PainelAnalitico() {
                   }`}
                   title="Ordenar por data de entrega recente"
                 >
-                  Recentes
+                  Mais recentes
                 </button>
               </div>
             </div>
@@ -895,7 +966,7 @@ export default function PainelAnalitico() {
                             Entregue em: {formatarDataBr(item.dataEntrega)}
                           </span>
                           <span className="font-bold text-slate-900 font-mono text-xs">
-                            {dias} {dias === 1 ? 'dia' : 'dias'}
+                            {dias} {dias === 1 ? 'dia corrido' : 'dias corridos'}
                           </span>
                         </div>
                       </div>
@@ -910,7 +981,7 @@ export default function PainelAnalitico() {
 
                       <div className="flex justify-between items-center mt-1 text-[11px] text-slate-400">
                         <span>Solicitante: {item.solicitante}</span>
-                        <span>Abertura: {formatarDataBr(item.dataPedido)}</span>
+                        <span>Solicitado em: {formatarDataBr(item.dataPedido)}</span>
                       </div>
                     </div>
                   );
@@ -923,7 +994,7 @@ export default function PainelAnalitico() {
           {totalPaginasG1 > 1 && (
             <div className="flex justify-between items-center mt-4 pt-3 border-t border-slate-100 text-xs">
               <span className="text-slate-500">
-                Página {paginaGrafico1} de {totalPaginasG1} ({pedidosGrafico1Ordenados.length} pedidos)
+                Página {paginaGrafico1} de {totalPaginasG1} ({pedidosGrafico1Ordenados.length} pedidos entregues)
               </span>
               <div className="flex gap-1">
                 <button
@@ -945,16 +1016,16 @@ export default function PainelAnalitico() {
           )}
         </Card>
 
-        {/* GRÁFICO 2: DISTRIBUIÇÃO DOS PRAZOS DE ENTREGA EM FAIXAS EXCLUSIVAS */}
+        {/* GRÁFICO 2: QUANTOS PEDIDOS FORAM ENTREGUES EM CADA FAIXA DE TEMPO */}
         <Card className="p-4 sm:p-6 border-slate-200 flex flex-col justify-between">
           <div>
             <div className="mb-4">
               <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                 <Layers size={18} className="text-indigo-600" />
-                Distribuição dos Prazos de Entrega em Faixas
+                Quantos pedidos foram entregues em cada faixa de tempo
               </h3>
               <p className="text-xs text-slate-500">
-                Classificação dos pedidos entregues por faixas de atendimento (clique para detalhar)
+                Distribuição dos pedidos entregues por tempo de atendimento (clique para detalhar)
               </p>
             </div>
 
@@ -1015,7 +1086,7 @@ export default function PainelAnalitico() {
                                 <span className="text-slate-500 text-[11px] ml-2">({p.solicitante})</span>
                               </div>
                               <div className="shrink-0 font-bold font-mono text-slate-700">
-                                {p.diasCalculados} dias
+                                {p.diasCalculados} {p.diasCalculados === 1 ? 'dia' : 'dias'}
                               </div>
                             </div>
                           ))
@@ -1029,54 +1100,54 @@ export default function PainelAnalitico() {
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500 flex justify-between">
-            <span>Total avaliado: {entreguesValidos.length} pedidos entregues</span>
-            <span className="font-medium">Meta recomendada: 80%+ até 15 dias</span>
+            <span>Total avaliado: {entreguesValidos.length} pedidos com entrega registrada</span>
+            <span className="font-medium text-slate-700">Classificação por tempo entre solicitação e entrega</span>
           </div>
         </Card>
       </div>
 
       {/* SEÇÃO DE GRÁFICOS: 3 E 4 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* GRÁFICO 3: PEDIDOS PENDENTES E TEMPO DE ESPERA (BACKLOG) */}
+        {/* GRÁFICO 3: PEDIDOS QUE CONTINUAM AGUARDANDO ENTREGA */}
         <Card className="p-4 sm:p-6 border-slate-200">
           <div className="mb-4">
             <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <Clock size={18} className="text-amber-600" />
-              Backlog: Pedidos Pendentes e Tempo de Espera
+              Pedidos que continuam aguardando entrega
             </h3>
             <p className="text-xs text-slate-500">
-              Pedidos em aberto ordenados pelo maior tempo aguardando atendimento
+              Pedidos pendentes em aberto ordenados pelo tempo transcorrido desde a solicitação
             </p>
           </div>
 
           {pendentesOrdenadosEspera.length === 0 ? (
             <div className="py-12 text-center text-slate-400 text-sm">
-              🎉 Parabéns! Não há pedidos pendentes no período selecionado.
+              Nenhum pedido aguardando entrega no período selecionado.
             </div>
           ) : (
             <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
               {pendentesOrdenadosEspera.map((item) => {
                 const dias = item.diasCalculados ?? 0;
-                let criticidade = {
-                  label: 'Normal',
+                let faixaEspera = {
+                  label: 'Até 15 dias em espera',
                   cor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
                   barra: 'bg-emerald-500',
                 };
                 if (dias > 60) {
-                  criticidade = {
-                    label: 'Crítico (>60d)',
+                  faixaEspera = {
+                    label: 'Mais de 60 dias em espera',
                     cor: 'bg-rose-100 text-rose-800 border-rose-300 font-bold',
                     barra: 'bg-rose-600',
                   };
                 } else if (dias > 30) {
-                  criticidade = {
-                    label: 'Atenção (>30d)',
+                  faixaEspera = {
+                    label: '31 a 60 dias em espera',
                     cor: 'bg-orange-100 text-orange-800 border-orange-200',
                     barra: 'bg-orange-500',
                   };
                 } else if (dias > 15) {
-                  criticidade = {
-                    label: 'Alerta (>15d)',
+                  faixaEspera = {
+                    label: '16 a 30 dias em espera',
                     cor: 'bg-amber-100 text-amber-800 border-amber-200',
                     barra: 'bg-amber-500',
                   };
@@ -1099,24 +1170,24 @@ export default function PainelAnalitico() {
                           </span>
                         </div>
                         <div className="text-[11px] text-slate-500 mt-0.5">
-                          Solicitante: <span className="font-medium text-slate-700">{item.solicitante}</span> • Resp:{' '}
+                          Solicitante: <span className="font-medium text-slate-700">{item.solicitante}</span> • Resp. Compra:{' '}
                           <span className="font-medium text-blue-700">{item.responsavelCompra || 'Não definido'}</span>
                         </div>
                       </div>
 
                       <div className="flex flex-col items-end gap-1 shrink-0">
-                        <span className={`text-[10px] px-2 py-0.5 rounded border ${criticidade.cor}`}>
-                          {criticidade.label}
+                        <span className={`text-[10px] px-2 py-0.5 rounded border ${faixaEspera.cor}`}>
+                          {faixaEspera.label}
                         </span>
                         <span className="font-black font-mono text-slate-900 text-xs">
-                          {dias} {dias === 1 ? 'dia' : 'dias'}
+                          {dias} {dias === 1 ? 'dia corrido' : 'dias corridos'}
                         </span>
                       </div>
                     </div>
 
                     {/* Barra de espera */}
                     <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                      <div className={`h-full ${criticidade.barra}`} style={{ width: `${pct}%` }}></div>
+                      <div className={`h-full ${faixaEspera.barra}`} style={{ width: `${pct}%` }}></div>
                     </div>
                   </div>
                 );
@@ -1125,15 +1196,15 @@ export default function PainelAnalitico() {
           )}
         </Card>
 
-        {/* GRÁFICO 4: EVOLUÇÃO MENSAL DO TEMPO DE ATENDIMENTO */}
+        {/* GRÁFICO 4: EVOLUÇÃO DO TEMPO DE ENTREGA AO LONGO DOS MESES */}
         <Card className="p-4 sm:p-6 border-slate-200">
           <div className="mb-4">
             <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <TrendingUp size={18} className="text-emerald-600" />
-              Evolução Mensal do Tempo de Atendimento
+              Evolução do tempo de entrega ao longo dos meses
             </h3>
             <p className="text-xs text-slate-500">
-              Tendência histórica da média e mediana de entrega x volume por mês
+              Comparativo mensal do tempo médio e mediano de atendimento x quantidade de pedidos
             </p>
           </div>
 
@@ -1149,10 +1220,10 @@ export default function PainelAnalitico() {
                   <thead className="bg-slate-50 text-slate-600 uppercase text-[10px] font-semibold border-b border-slate-200">
                     <tr>
                       <th className="px-2.5 py-2">Mês/Ano</th>
-                      <th className="px-2.5 py-2 text-center">Novos Pedidos</th>
-                      <th className="px-2.5 py-2 text-center">Entregues</th>
+                      <th className="px-2.5 py-2 text-center">Pedidos Solicitados</th>
+                      <th className="px-2.5 py-2 text-center">Pedidos Entregues</th>
                       <th className="px-2.5 py-2 text-right">Tempo Médio</th>
-                      <th className="px-2.5 py-2 text-right">Mediana</th>
+                      <th className="px-2.5 py-2 text-right">Tempo Mediano</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -1166,10 +1237,10 @@ export default function PainelAnalitico() {
                           {m.pedidosConcluidos}
                         </td>
                         <td className="px-2.5 py-2.5 text-right font-mono font-bold text-slate-800">
-                          {m.pedidosConcluidos > 0 ? `${m.tempoMedioDias.toFixed(1)} d` : '-'}
+                          {m.pedidosConcluidos > 0 ? `${m.tempoMedioDias.toFixed(1)} dias` : '-'}
                         </td>
                         <td className="px-2.5 py-2.5 text-right font-mono text-slate-600">
-                          {m.pedidosConcluidos > 0 ? `${m.tempoMedianoDias.toFixed(1)} d` : '-'}
+                          {m.pedidosConcluidos > 0 ? `${m.tempoMedianoDias.toFixed(1)} dias` : '-'}
                         </td>
                       </tr>
                     ))}
@@ -1183,7 +1254,7 @@ export default function PainelAnalitico() {
                   <span>Comparativo Visual de Desempenho Mensal</span>
                   <div className="flex items-center gap-3">
                     <span className="flex items-center gap-1">
-                      <span className="w-2.5 h-2.5 bg-blue-500 rounded-xs"></span> Novos
+                      <span className="w-2.5 h-2.5 bg-blue-500 rounded-xs"></span> Solicitados
                     </span>
                     <span className="flex items-center gap-1">
                       <span className="w-2.5 h-2.5 bg-emerald-500 rounded-xs"></span> Entregues
@@ -1198,7 +1269,7 @@ export default function PainelAnalitico() {
                       <div className="text-lg font-black text-slate-900 font-mono">
                         {m.pedidosConcluidos > 0 ? `${m.tempoMedioDias.toFixed(1)}d` : '-'}
                       </div>
-                      <div className="text-[10px] text-slate-500">Média de entrega</div>
+                      <div className="text-[10px] text-slate-500">Tempo médio</div>
                       <div className="mt-1 flex justify-center gap-2 text-[10px] font-semibold">
                         <span className="text-blue-600">+{m.novosPedidosAbertos}</span>
                         <span className="text-emerald-600">✓{m.pedidosConcluidos}</span>
@@ -1212,16 +1283,16 @@ export default function PainelAnalitico() {
         </Card>
       </div>
 
-      {/* 5. TABELA GERAL DE REGISTROS COM HISTÓRICO E FILTROS */}
+      {/* 5. TABELA GERAL: HISTÓRICO DOS PEDIDOS */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
             <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
               <FileText size={18} className="text-blue-600" />
-              Histórico Detalhado dos Pedidos
+              Histórico dos Pedidos
             </h3>
             <p className="text-xs text-slate-500">
-              Consulte todas as solicitações com cálculo de lead-time e status operacional
+              Consulte todas as solicitações com tempo de atendimento ou tempo de espera
             </p>
           </div>
 
@@ -1287,10 +1358,10 @@ export default function PainelAnalitico() {
                   className="px-3.5 py-3 cursor-pointer hover:bg-slate-100"
                 >
                   <div className="flex items-center gap-1">
-                    Data Solicitação <ArrowUpDown size={12} />
+                    Data da Solicitação <ArrowUpDown size={12} />
                   </div>
                 </th>
-                <th className="px-3.5 py-3">Data Entrega</th>
+                <th className="px-3.5 py-3">Data da Entrega</th>
                 <th
                   onClick={() => {
                     setColunaOrdenacao('situacao');
@@ -1310,7 +1381,7 @@ export default function PainelAnalitico() {
                   className="px-3.5 py-3 text-right cursor-pointer hover:bg-slate-100"
                 >
                   <div className="flex items-center justify-end gap-1">
-                    Prazo / Espera <ArrowUpDown size={12} />
+                    Tempo Transcorrido (Dias corridos) <ArrowUpDown size={12} />
                   </div>
                 </th>
               </tr>
@@ -1392,20 +1463,20 @@ export default function PainelAnalitico() {
             </div>
 
             <div className="space-y-4 text-xs">
-              {/* Resumo de Lead-Time */}
+              {/* Resumo de Tempo de Atendimento / Espera */}
               <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between">
                 <div>
                   <span className="font-bold text-blue-900 text-xs block">
                     {solicitacaoSelecionada.tempoTipo === 'ATENDIMENTO'
-                      ? 'Tempo Total de Atendimento (Lead Time):'
+                      ? 'Tempo entre solicitação e entrega:'
                       : solicitacaoSelecionada.tempoTipo === 'ESPERA'
-                      ? 'Tempo Atual de Espera em Aberto:'
-                      : 'Situação do Prazo:'}
+                      ? 'Tempo atual aguardando entrega:'
+                      : 'Situação do prazo:'}
                   </span>
                   <span className="text-slate-600 text-[11px]">
                     {solicitacaoSelecionada.tempoTipo === 'ATENDIMENTO'
-                      ? 'Dias corridos entre solicitação e entrega efetiva'
-                      : 'Dias corridos desde a data de solicitação até hoje'}
+                      ? 'Dias corridos entre a data do pedido e a entrega efetiva'
+                      : 'Dias corridos desde a data da solicitação até hoje'}
                   </span>
                 </div>
                 <div className="text-right">{renderBadgeTempo(solicitacaoSelecionada)}</div>
@@ -1474,7 +1545,7 @@ export default function PainelAnalitico() {
                 </h4>
                 <div className="grid grid-cols-2 gap-2 text-[11px]">
                   <div>
-                    <span className="text-slate-500 block">Responsável:</span>
+                    <span className="text-slate-500 block">Responsável pela Compra:</span>
                     <span className="font-bold text-slate-800">
                       {solicitacaoSelecionada.responsavelCompra || 'Não definido'}
                     </span>
@@ -1513,10 +1584,10 @@ export default function PainelAnalitico() {
         </div>
       )}
 
-      {/* MODAL / TELA DE RELATÓRIO GERENCIAL FORMATADO PARA IMPRESSÃO (PDF) */}
+      {/* MODAL / TELA DE RELATÓRIO FORMATADO PARA IMPRESSÃO (PDF) */}
       {exibirRelatorioImpressao && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-4 print:p-0 print:bg-white">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-y-auto p-6 sm:p-8 border border-slate-200 print:shadow-none print:border-none print:max-h-none print:p-0">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-4 print:p-0 print:bg-white print:static print:block">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-y-auto p-6 sm:p-8 border border-slate-200 print:shadow-none print:border-none print:max-h-none print:p-6 print:w-full print:max-w-none">
             {/* Barra de Ações do Relatório (escondida na impressão) */}
             <div className="flex justify-between items-center pb-4 border-b border-slate-200 mb-6 print:hidden">
               <div className="flex items-center gap-2">
@@ -1526,13 +1597,13 @@ export default function PainelAnalitico() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => window.print()}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
                 >
                   <Printer size={15} /> Imprimir / Salvar em PDF
                 </button>
                 <button
                   onClick={() => setExibirRelatorioImpressao(false)}
-                  className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors"
+                  className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
                 >
                   <X size={18} />
                 </button>
@@ -1542,23 +1613,23 @@ export default function PainelAnalitico() {
             {/* CONTEÚDO FORMATADO DO RELATÓRIO */}
             <div className="space-y-6 text-slate-900">
               {/* Cabeçalho Corporativo */}
-              <div className="border-b-2 border-slate-800 pb-4 flex justify-between items-end">
+              <div className="border-b-2 border-slate-800 pb-4 flex justify-between items-end print:break-inside-avoid">
                 <div>
                   <h2 className="text-xl font-black uppercase tracking-tight text-slate-900">
-                    Controle de Pedidos & Suprimentos
+                    CONTROLE DE PEDIDOS & SUPRIMENTOS
                   </h2>
                   <p className="text-sm font-semibold text-slate-600">
-                    Relatório Executivo de Prazos, SLA e Atendimento de Solicitações
+                    Relatório de Acompanhamento de Pedidos e Prazos de Entrega
                   </p>
                 </div>
                 <div className="text-right text-xs text-slate-500">
                   <div>Data de emissão: {new Date().toLocaleDateString('pt-BR')} {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>
-                  <div>Base de dados: Planilha Google Sheets (Dados Oficiais)</div>
+                  <div>Base de dados: Registros Oficiais do Sistema</div>
                 </div>
               </div>
 
               {/* Resumo do Período e Parâmetros */}
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs print:break-inside-avoid">
                 <div>
                   <span className="text-slate-500 block font-medium">Período Selecionado:</span>
                   <span className="font-bold text-slate-800">
@@ -1567,12 +1638,20 @@ export default function PainelAnalitico() {
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block font-medium">Filtro de Situação:</span>
-                  <span className="font-bold text-slate-800">{situacaoFiltro}</span>
+                  <span className="text-slate-500 block font-medium">Situação dos Pedidos:</span>
+                  <span className="font-bold text-slate-800">
+                    {situacaoFiltro === 'TODOS'
+                      ? 'Todas as situações'
+                      : situacaoFiltro === 'ENTREGUE'
+                      ? 'Pedidos entregues'
+                      : situacaoFiltro === 'PENDENTE'
+                      ? 'Pedidos aguardando entrega'
+                      : 'Cancelados'}
+                  </span>
                 </div>
                 <div>
                   <span className="text-slate-500 block font-medium">Solicitante:</span>
-                  <span className="font-bold text-slate-800">{solicitanteFiltro || 'Todos'}</span>
+                  <span className="font-bold text-slate-800">{solicitanteFiltro || 'Todos os solicitantes'}</span>
                 </div>
                 <div>
                   <span className="text-slate-500 block font-medium">Total de Registros:</span>
@@ -1580,64 +1659,71 @@ export default function PainelAnalitico() {
                 </div>
               </div>
 
-              {/* Quadro de Indicadores (KPIs) */}
-              <div>
+              {/* Quadro de Indicadores Principais */}
+              <div className="print:break-inside-avoid">
                 <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 mb-2">
-                  1. Indicadores Principais de Desempenho (SLA)
+                  1. Indicadores Principais de Atendimento
                 </h4>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="p-3 border border-slate-200 rounded-lg">
-                    <div className="text-[11px] text-slate-500">Total de Pedidos</div>
+                  <div className="p-3 border border-slate-200 rounded-lg bg-white">
+                    <div className="text-[11px] text-slate-500">Total de pedidos</div>
                     <div className="text-xl font-bold text-slate-900">{indicadores.totalPedidos}</div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">Período selecionado</div>
                   </div>
-                  <div className="p-3 border border-slate-200 rounded-lg">
-                    <div className="text-[11px] text-slate-500">Pedidos Entregues</div>
+                  <div className="p-3 border border-slate-200 rounded-lg bg-white">
+                    <div className="text-[11px] text-slate-500">Pedidos entregues</div>
                     <div className="text-xl font-bold text-emerald-700">
                       {indicadores.pedidosEntregues} ({indicadores.pedidosEntreguesPct.toFixed(1)}%)
                     </div>
+                    <div className="text-[10px] text-emerald-600 mt-0.5">Pedidos com entrega registrada</div>
                   </div>
-                  <div className="p-3 border border-slate-200 rounded-lg">
-                    <div className="text-[11px] text-slate-500">Pedidos Pendentes</div>
+                  <div className="p-3 border border-slate-200 rounded-lg bg-white">
+                    <div className="text-[11px] text-slate-500">Pedidos pendentes</div>
                     <div className="text-xl font-bold text-amber-700">
                       {indicadores.pedidosPendentes} ({indicadores.pedidosPendentesPct.toFixed(1)}%)
                     </div>
+                    <div className="text-[10px] text-amber-600 mt-0.5">Aguardando entrega</div>
                   </div>
-                  <div className="p-3 border border-slate-200 rounded-lg">
-                    <div className="text-[11px] text-slate-500">Tempo Médio SLA</div>
+                  <div className="p-3 border border-slate-200 rounded-lg bg-white">
+                    <div className="text-[11px] text-slate-500">Tempo médio para entrega</div>
                     <div className="text-xl font-bold text-blue-700">
                       {entreguesValidos.length > 0 ? `${indicadores.tempoMedioEntregaDias.toFixed(1)} dias` : '-'}
                     </div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">Média dos pedidos entregues</div>
                   </div>
-                  <div className="p-3 border border-slate-200 rounded-lg">
-                    <div className="text-[11px] text-slate-500">Tempo Mediano SLA</div>
+                  <div className="p-3 border border-slate-200 rounded-lg bg-white">
+                    <div className="text-[11px] text-slate-500">Tempo mediano para entrega</div>
                     <div className="text-xl font-bold text-slate-800">
                       {entreguesValidos.length > 0 ? `${indicadores.tempoMedianoEntregaDias.toFixed(1)} dias` : '-'}
                     </div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">Mediana estatística</div>
                   </div>
-                  <div className="p-3 border border-slate-200 rounded-lg">
-                    <div className="text-[11px] text-slate-500">Maior Espera em Aberto</div>
+                  <div className="p-3 border border-slate-200 rounded-lg bg-white">
+                    <div className="text-[11px] text-slate-500">Pedido há mais tempo aguardando</div>
                     <div className="text-xl font-bold text-rose-700">
                       {indicadores.maiorEsperaAbertaDias > 0 ? `${indicadores.maiorEsperaAbertaDias} dias` : '-'}
                     </div>
+                    <div className="text-[10px] text-rose-600 mt-0.5">Maior tempo transcorrido</div>
                   </div>
-                  <div className="p-3 border border-slate-200 rounded-lg col-span-2">
-                    <div className="text-[11px] text-slate-500">Idade Média do Backlog Pendente</div>
+                  <div className="p-3 border border-slate-200 rounded-lg bg-white col-span-2">
+                    <div className="text-[11px] text-slate-500">Tempo médio de espera dos pedidos pendentes</div>
                     <div className="text-xl font-bold text-slate-900">
                       {pendentesValidos.length > 0 ? `${indicadores.tempoAtualEsperaMedioDias.toFixed(1)} dias corridos` : '0 dias'}
                     </div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">Média dos pedidos que continuam aguardando</div>
                   </div>
                 </div>
               </div>
 
               {/* Quadro de Distribuição por Faixas */}
-              <div>
+              <div className="print:break-inside-avoid">
                 <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 mb-2">
-                  2. Distribuição por Faixas de Prazo (Pedidos Concluídos)
+                  2. Entregas por tempo de atendimento (pedidos com entrega registrada)
                 </h4>
                 <table className="w-full text-xs text-left border border-slate-200">
                   <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px]">
                     <tr>
-                      <th className="p-2 border-b">Faixa de Prazo</th>
+                      <th className="p-2 border-b">Faixa de Tempo</th>
                       <th className="p-2 border-b">Descrição</th>
                       <th className="p-2 border-b text-center">Quantidade</th>
                       <th className="p-2 border-b text-right">Percentual</th>
@@ -1645,7 +1731,7 @@ export default function PainelAnalitico() {
                   </thead>
                   <tbody className="divide-y divide-slate-200">
                     {faixasPrazo.map((f) => (
-                      <tr key={f.id}>
+                      <tr key={f.id} className="print:break-inside-avoid">
                         <td className="p-2 font-bold text-slate-900">{f.label}</td>
                         <td className="p-2 text-slate-600">{f.descricao}</td>
                         <td className="p-2 text-center font-bold">{f.quantidade}</td>
@@ -1656,10 +1742,10 @@ export default function PainelAnalitico() {
                 </table>
               </div>
 
-              {/* Listagem dos Registros Selecionados */}
-              <div>
+              {/* Listagem dos Pedidos Selecionados */}
+              <div className="print:break-inside-avoid">
                 <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 mb-2">
-                  3. Relação de Solicitações do Período ({dadosFiltrados.length} pedidos)
+                  3. Relação de Pedidos do Período ({dadosFiltrados.length} pedidos)
                 </h4>
                 <table className="w-full text-[11px] text-left border border-slate-200">
                   <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[9px]">
@@ -1668,15 +1754,15 @@ export default function PainelAnalitico() {
                       <th className="p-2 border-b">Solicitante</th>
                       <th className="p-2 border-b">Material</th>
                       <th className="p-2 border-b text-center">Qtd</th>
-                      <th className="p-2 border-b">Abertura</th>
-                      <th className="p-2 border-b">Entrega</th>
+                      <th className="p-2 border-b">Data da Solicitação</th>
+                      <th className="p-2 border-b">Data da Entrega</th>
                       <th className="p-2 border-b">Situação</th>
-                      <th className="p-2 border-b text-right">Dias</th>
+                      <th className="p-2 border-b text-right">Dias Corridos</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {dadosFiltrados.slice(0, 50).map((p) => (
-                      <tr key={p.protocolo}>
+                      <tr key={p.protocolo} className="print:break-inside-avoid">
                         <td className="p-1.5 font-mono font-bold text-slate-900">{p.protocolo}</td>
                         <td className="p-1.5 text-slate-800">{p.solicitante}</td>
                         <td className="p-1.5 font-semibold text-slate-900 truncate max-w-xs">{p.material}</td>
@@ -1699,7 +1785,7 @@ export default function PainelAnalitico() {
               </div>
 
               {/* Rodapé de Assinatura */}
-              <div className="pt-8 border-t border-slate-300 flex justify-between items-end text-xs text-slate-500">
+              <div className="pt-8 border-t border-slate-300 flex justify-between items-end text-xs text-slate-500 print:break-inside-avoid">
                 <div>
                   <div className="border-t border-slate-400 w-48 mb-1"></div>
                   <div>Responsável pelo Controle</div>

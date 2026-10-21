@@ -309,7 +309,7 @@ export function calcularFaixasPrazo(entreguesValidos: SolicitacaoAnalitica[]): F
     {
       id: 'ate-7',
       label: 'Até 7 dias',
-      descricao: 'Entregas ágeis dentro da primeira semana',
+      descricao: 'Entregas em até 1 semana',
       min: 0,
       max: 7,
       cor: 'bg-emerald-500',
@@ -317,7 +317,7 @@ export function calcularFaixasPrazo(entreguesValidos: SolicitacaoAnalitica[]): F
     {
       id: '8-15',
       label: '8 a 15 dias',
-      descricao: 'Entregas regulares no ciclo padrão',
+      descricao: 'Entregas entre 1 e 2 semanas',
       min: 8,
       max: 15,
       cor: 'bg-blue-500',
@@ -325,7 +325,7 @@ export function calcularFaixasPrazo(entreguesValidos: SolicitacaoAnalitica[]): F
     {
       id: '16-30',
       label: '16 a 30 dias',
-      descricao: 'Entregas com prazo estendido (até 1 mês)',
+      descricao: 'Entregas entre 2 semanas e 1 mês',
       min: 16,
       max: 30,
       cor: 'bg-amber-500',
@@ -333,7 +333,7 @@ export function calcularFaixasPrazo(entreguesValidos: SolicitacaoAnalitica[]): F
     {
       id: '31-60',
       label: '31 a 60 dias',
-      descricao: 'Entregas com atraso significativo (1 a 2 meses)',
+      descricao: 'Entregas entre 1 e 2 meses',
       min: 31,
       max: 60,
       cor: 'bg-orange-500',
@@ -341,7 +341,7 @@ export function calcularFaixasPrazo(entreguesValidos: SolicitacaoAnalitica[]): F
     {
       id: 'mais-60',
       label: 'Mais de 60 dias',
-      descricao: 'Entregas críticas acima de 2 meses',
+      descricao: 'Entregas acima de 2 meses',
       min: 61,
       max: Infinity,
       cor: 'bg-rose-500',
